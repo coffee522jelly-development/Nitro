@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nitro-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff3e00" />
+      <stop offset="100%" stop-color="#ffaa00" />
+    </linearGradient>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e1e" />
+      <stop offset="100%" stop-color="#000000" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="224" fill="url(#bg-gradient)" />
+
+  <g transform="translate(150, 150) scale(0.7)">
+    <!-- Speed lines -->
+    <path d="M 0 200 L 150 200" stroke="#ffaa00" stroke-width="40" stroke-linecap="round" opacity="0.8" />
+    <path d="M -100 400 L 100 400" stroke="#ff3e00" stroke-width="40" stroke-linecap="round" opacity="0.6" />
+    <path d="M -50 600 L 150 600" stroke="#ffaa00" stroke-width="40" stroke-linecap="round" opacity="0.9" />
+    <path d="M 50 800 L 200 800" stroke="#ff3e00" stroke-width="40" stroke-linecap="round" opacity="0.5" />
+
+    <!-- The N letter with a dynamic, italicized font style -->
+    <path d="M 250 850 L 400 850 L 550 400 L 550 850 L 700 850 L 850 150 L 700 150 L 550 600 L 550 150 L 400 150 Z" fill="url(#nitro-gradient)" transform="skewX(-15)" />
+  </g>
+</svg>
