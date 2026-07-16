@@ -1,5 +1,12 @@
 use std::fs;
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Snippet {
+    pub title: String,
+    pub content: String,
+}
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -40,12 +47,52 @@ fn search_files(query: String) -> Vec<String> {
     results
 }
 
+fn get_snippets_file_path() -> Option<PathBuf> {
+    let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
+    let path = PathBuf::from(home_dir).join(".nitro");
+    if !path.exists() {
+        let _ = fs::create_dir_all(&path);
+    }
+    Some(path.join("snippets.json"))
+}
+
+#[tauri::command]
+fn get_snippets() -> Vec<Snippet> {
+    let path = match get_snippets_file_path() {
+        Some(p) => p,
+        None => return vec![],
+    };
+
+    if !path.exists() {
+        return vec![];
+    }
+
+    match fs::read_to_string(path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_else(|_| vec![]),
+        Err(_) => vec![],
+    }
+}
+
+#[tauri::command]
+fn save_snippet(title: String, content: String) -> Result<(), String> {
+    let path = get_snippets_file_path().ok_or("Failed to get config path")?;
+
+    let mut snippets = get_snippets();
+    snippets.push(Snippet { title, content });
+
+    let json = serde_json::to_string_pretty(&snippets).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 use tauri::{tray::TrayIconBuilder, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, shortcut, event| {
             if event.state == ShortcutState::Pressed {
@@ -85,7 +132,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
