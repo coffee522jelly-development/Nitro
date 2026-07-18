@@ -2,7 +2,8 @@ node_modules/
 build/
 .svelte-kit/
 src-tauri/target/
-*.png
-src-tauri/icons/**/*.png
-src-tauri/icons/**/*.ico
-src-tauri/icons/**/*.icns
+
+# Ignore mobile icons to save space, but track desktop icons needed for compilation
+src-tauri/icons/android/
+src-tauri/icons/ios/
+app-icon.png
