@@ -13,7 +13,6 @@
 
   let query = $state("");
   let results: SearchResult[] = $state([]);
-  let selectedIndex = $state(0);
   let inputRef = $state<HTMLInputElement | null>(null);
 
   // State for snippet creation
@@ -22,13 +21,7 @@
   let newSnippetContent = $state("");
 
   async function search() {
-    if (query.trim() === "") {
-      results = [];
-      selectedIndex = 0;
-      return;
-    }
-
-    // Command to open snippet creation dialog
+    // Command to open snippet creation dialog (legacy fallback)
     if (query.startsWith("> snippet")) {
       showSnippetDialog = true;
       query = "";
@@ -36,19 +29,21 @@
     }
 
     try {
-      let files: string[] = await invoke("search_files", { query });
-      let snippets: Snippet[] = await invoke("get_snippets");
+      let snippets: Snippet[] = await invoke<Snippet[]>("get_snippets").catch(() => []);
 
-      const queryLower = query.toLowerCase();
-      let matchedSnippets = snippets.filter(s => s.title.toLowerCase().includes(queryLower) || s.content.toLowerCase().includes(queryLower));
+      if (query.trim() === "") {
+        // If empty query, just show all snippets
+        results = snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content }));
+      } else {
+        let files: string[] = await invoke<string[]>("search_files", { query }).catch(() => []);
 
-      results = [
-        ...matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content })),
-        ...files.map(f => ({ type: "file" as const, path: f, name: f.split(/[/\\]/).pop() || f }))
-      ];
+        const queryLower = query.toLowerCase();
+        let matchedSnippets = snippets.filter(s => s.title.toLowerCase().includes(queryLower) || s.content.toLowerCase().includes(queryLower));
 
-      if (selectedIndex >= results.length) {
-        selectedIndex = Math.max(0, results.length - 1);
+        results = [
+          ...matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content })),
+          ...files.map(f => ({ type: "file" as const, path: f, name: f.split(/[/\\]/).pop() || f }))
+        ];
       }
     } catch (e) {
       console.error("Search failed:", e);
@@ -57,20 +52,7 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (showSnippetDialog) return; // Let dialog handle its own keys
-    if (results.length === 0) return;
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      selectedIndex = Math.min(results.length - 1, Math.max(0, selectedIndex + 1));
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      selectedIndex = Math.max(0, selectedIndex - 1);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      if (results[selectedIndex]) {
-        executeResult(results[selectedIndex]);
-      }
-    } else if (event.key === "Escape") {
+    if (event.key === "Escape") {
       event.preventDefault();
       // Hide window by clearing focus/query, global shortcut toggles, but this is a nice fallback.
       query = "";
@@ -158,20 +140,30 @@
     </div>
   {/if}
 
-  <Command.Root class="w-full max-w-[600px] rounded-xl border border-border shadow-2xl bg-popover text-popover-foreground">
-    <Command.Input
-      bind:ref={inputRef}
-      bind:value={query}
-      placeholder="Search files or type '> snippet'..."
-      autofocus
-      class="text-xl"
-    />
+  <Command.Root shouldFilter={false} class="w-full max-w-[600px] rounded-xl border border-border shadow-2xl bg-popover text-popover-foreground overflow-hidden">
+    <div class="flex items-center border-b border-border px-3">
+      <div class="flex-1">
+        <Command.Input
+          bind:ref={inputRef}
+          bind:value={query}
+          placeholder="Search files or snippets..."
+          autofocus
+          class="text-xl border-0 ring-0 focus:ring-0 shadow-none h-14"
+        />
+      </div>
+      <button
+        class="ml-2 rounded-md bg-secondary/50 px-3 py-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0"
+        onclick={() => showSnippetDialog = true}
+        title="Add Snippet"
+      >
+        <span class="mr-1">➕</span> Snippet
+      </button>
+    </div>
 
     {#if results.length > 0}
       <Command.List>
         {#each results as result, i}
           <Command.Item
-            class={i === selectedIndex ? "bg-accent text-accent-foreground" : ""}
             onSelect={() => { executeResult(result); }}
           >
             {#if result.type === "snippet"}
