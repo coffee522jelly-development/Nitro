@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct Snippet {
     pub title: String,
     pub content: String,
+    pub tags: Option<Vec<String>>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -74,11 +75,11 @@ fn get_snippets() -> Vec<Snippet> {
 }
 
 #[tauri::command]
-fn save_snippet(title: String, content: String) -> Result<(), String> {
+fn save_snippet(title: String, content: String, tags: Option<Vec<String>>) -> Result<(), String> {
     let path = get_snippets_file_path().ok_or("Failed to get config path")?;
 
     let mut snippets = get_snippets();
-    snippets.push(Snippet { title, content });
+    snippets.push(Snippet { title, content, tags });
 
     let json = serde_json::to_string_pretty(&snippets).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;

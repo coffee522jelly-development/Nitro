@@ -6,10 +6,10 @@
   import { Input } from "$lib/components/ui/input";
   import * as Command from "$lib/components/ui/command";
 
-  type Snippet = { title: string; content: string };
+  type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
     | { type: "file"; path: string; name: string }
-    | { type: "snippet"; title: string; content: string };
+    | { type: "snippet"; title: string; content: string; tags?: string[] };
 
   let query = $state("");
   let results: SearchResult[] = $state([]);
@@ -19,6 +19,7 @@
   let showSnippetDialog = $state(false);
   let newSnippetTitle = $state("");
   let newSnippetContent = $state("");
+  let newSnippetTags = $state(""); // Comma separated
 
   async function search() {
     // Command to open snippet creation dialog (legacy fallback)
@@ -33,15 +34,20 @@
 
       if (query.trim() === "") {
         // If empty query, just show all snippets
-        results = snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content }));
+        results = snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
       } else {
         let files: string[] = await invoke<string[]>("search_files", { query }).catch(() => []);
 
         const queryLower = query.toLowerCase();
-        let matchedSnippets = snippets.filter(s => s.title.toLowerCase().includes(queryLower) || s.content.toLowerCase().includes(queryLower));
+        let matchedSnippets = snippets.filter(s => {
+          let matchTitle = s.title.toLowerCase().includes(queryLower);
+          let matchContent = s.content.toLowerCase().includes(queryLower);
+          let matchTags = s.tags ? s.tags.some(tag => tag.toLowerCase().includes(queryLower)) : false;
+          return matchTitle || matchContent || matchTags;
+        });
 
         results = [
-          ...matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content })),
+          ...matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags })),
           ...files.map(f => ({ type: "file" as const, path: f, name: f.split(/[/\\]/).pop() || f }))
         ];
       }
@@ -78,11 +84,17 @@
 
   async function handleSaveSnippet() {
     if (newSnippetTitle.trim() && newSnippetContent.trim()) {
+      let tags = newSnippetTags.split(",").map(t => t.trim()).filter(t => t.length > 0);
       try {
-        await invoke("save_snippet", { title: newSnippetTitle, content: newSnippetContent });
+        await invoke("save_snippet", {
+          title: newSnippetTitle,
+          content: newSnippetContent,
+          tags: tags.length > 0 ? tags : null
+        });
         showSnippetDialog = false;
         newSnippetTitle = "";
         newSnippetContent = "";
+        newSnippetTags = "";
         // Refocus input
         setTimeout(() => inputRef?.focus(), 100);
       } catch (e) {
@@ -116,24 +128,27 @@
   {#if showSnippetDialog}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div class="w-full max-w-2xl rounded-xl bg-popover p-6 shadow-2xl border border-border">
-        <h2 class="mb-4 text-xl font-bold text-popover-foreground">New Snippet</h2>
+        <h2 class="mb-4 text-xl font-bold text-popover-foreground">新しいスニペット</h2>
         <div class="space-y-4">
           <div>
             <!-- svelte-ignore a11y_autofocus -->
-            <Input bind:value={newSnippetTitle} placeholder="Snippet Title" class="w-full font-mono text-sm" autofocus onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; }}/>
+            <Input bind:value={newSnippetTitle} placeholder="タイトル" class="w-full font-mono text-sm" autofocus onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; }}/>
           </div>
           <div>
             <textarea
               bind:value={newSnippetContent}
-              placeholder="Snippet Content"
+              placeholder="スニペット内容"
               class="flex min-h-[250px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}
             ></textarea>
-            <p class="mt-2 text-xs text-muted-foreground">Press Ctrl+Enter to save</p>
+          </div>
+          <div>
+            <Input bind:value={newSnippetTags} placeholder="タグ (カンマ区切り)" class="w-full font-mono text-sm" onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}/>
+            <p class="mt-2 text-xs text-muted-foreground">保存するには Ctrl+Enter を押してください</p>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSnippetDialog = false}>Cancel</button>
-            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={handleSaveSnippet}>Save</button>
+            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSnippetDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={handleSaveSnippet}>保存</button>
           </div>
         </div>
       </div>
@@ -146,7 +161,7 @@
         <Command.Input
           bind:ref={inputRef}
           bind:value={query}
-          placeholder="Search files or snippets..."
+          placeholder="ファイルやスニペットを検索..."
           autofocus
           class="text-xl border-0 ring-0 focus:ring-0 shadow-none h-14 px-2"
         />
@@ -154,9 +169,9 @@
       <button
         class="ml-2 rounded-md bg-secondary/50 px-3 py-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0"
         onclick={() => showSnippetDialog = true}
-        title="Add Snippet"
+        title="スニペット追加"
       >
-        <span class="mr-1">➕</span> Snippet
+        <span class="mr-1">➕</span> スニペット
       </button>
     </div>
 
