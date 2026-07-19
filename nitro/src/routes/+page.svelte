@@ -148,7 +148,7 @@
           bind:value={query}
           placeholder="Search files or snippets..."
           autofocus
-          class="text-xl border-0 ring-0 focus:ring-0 shadow-none h-14"
+          class="text-xl border-0 ring-0 focus:ring-0 shadow-none h-14 px-2"
         />
       </div>
       <button
