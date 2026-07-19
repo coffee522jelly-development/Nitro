@@ -114,19 +114,19 @@
 
 <main class="container">
   {#if showSnippetDialog}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div class="w-full max-w-md rounded-xl bg-popover p-6 shadow-2xl border border-border">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div class="w-full max-w-2xl rounded-xl bg-popover p-6 shadow-2xl border border-border">
         <h2 class="mb-4 text-xl font-bold text-popover-foreground">New Snippet</h2>
         <div class="space-y-4">
           <div>
             <!-- svelte-ignore a11y_autofocus -->
-            <Input bind:value={newSnippetTitle} placeholder="Snippet Title" class="w-full" autofocus onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; }}/>
+            <Input bind:value={newSnippetTitle} placeholder="Snippet Title" class="w-full font-mono text-sm" autofocus onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; }}/>
           </div>
           <div>
             <textarea
               bind:value={newSnippetContent}
               placeholder="Snippet Content"
-              class="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              class="flex min-h-[250px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}
             ></textarea>
             <p class="mt-2 text-xs text-muted-foreground">Press Ctrl+Enter to save</p>
