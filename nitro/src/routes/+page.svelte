@@ -5,6 +5,7 @@
   import { onMount } from "svelte";
   import { Input } from "$lib/components/ui/input";
   import * as Command from "$lib/components/ui/command";
+  import SettingsIcon from "lucide-svelte/icons/settings";
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
@@ -20,6 +21,35 @@
   let newSnippetTitle = $state("");
   let newSnippetContent = $state("");
   let newSnippetTags = $state(""); // Comma separated
+
+  // State for snippet viewing
+  let viewingSnippet = $state<Snippet | null>(null);
+
+  // State for settings
+  let showSettingsDialog = $state(false);
+  let shortcutSetting = $state("Ctrl+Space");
+  let themeColorSetting = $state("zinc");
+
+  async function loadSettings() {
+    try {
+      let settings: { shortcut: string, theme_color: string } = await invoke("get_settings");
+      shortcutSetting = settings.shortcut;
+      themeColorSetting = settings.theme_color;
+    } catch (e) {
+      console.error("Failed to load settings:", e);
+    }
+  }
+
+  async function saveSettings() {
+    try {
+      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting });
+      showSettingsDialog = false;
+      // Refocus input
+      setTimeout(() => inputRef?.focus(), 100);
+    } catch (e) {
+      console.error("Failed to save settings:", e);
+    }
+  }
 
   async function search() {
     // Command to open snippet creation dialog (legacy fallback)
@@ -57,7 +87,7 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (showSnippetDialog) return; // Let dialog handle its own keys
+    if (showSnippetDialog || viewingSnippet || showSettingsDialog) return; // Let dialogs handle their own keys
     if (event.key === "Escape") {
       event.preventDefault();
       // Hide window by clearing focus/query, global shortcut toggles, but this is a nice fallback.
@@ -72,13 +102,28 @@
       if (result.type === "file") {
         await invoke("plugin:opener|open", { path: result.path });
       } else if (result.type === "snippet") {
-        await writeText(result.content);
-        query = "";
-        results = [];
-        await getCurrentWindow().hide();
+        viewingSnippet = {
+          title: result.title,
+          content: result.content,
+          tags: result.tags
+        };
       }
     } catch (e) {
       console.error("Execution failed:", e);
+    }
+  }
+
+  async function copyAndCloseSnippet() {
+    if (viewingSnippet) {
+      try {
+        await writeText(viewingSnippet.content);
+        viewingSnippet = null;
+        query = "";
+        results = [];
+        await getCurrentWindow().hide();
+      } catch (e) {
+        console.error("Copy failed:", e);
+      }
     }
   }
 
@@ -109,6 +154,7 @@
   });
 
   onMount(() => {
+    loadSettings();
     if (inputRef) {
       inputRef.focus();
     }
@@ -125,6 +171,67 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <main class="container">
+  {#if viewingSnippet}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div class="w-full max-w-2xl rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
+        <h2 class="mb-4 text-xl font-bold text-popover-foreground">{viewingSnippet.title}</h2>
+        <div class="space-y-4">
+          <div>
+            <textarea
+              readonly
+              class="flex min-h-[250px] w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+              onkeydown={(e) => { if (e.key === 'Escape') viewingSnippet = null; else if (e.key === 'Enter') copyAndCloseSnippet(); }}
+            >{viewingSnippet.content}</textarea>
+          </div>
+          {#if viewingSnippet.tags && viewingSnippet.tags.length > 0}
+            <div class="flex flex-wrap gap-2">
+              {#each viewingSnippet.tags as tag}
+                <span class="inline-flex items-center rounded-md bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
+                  {tag}
+                </span>
+              {/each}
+            </div>
+          {/if}
+          <div class="flex justify-end space-x-2 pt-2">
+            <!-- svelte-ignore a11y_autofocus -->
+            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" autofocus onclick={() => viewingSnippet = null}>閉じる</button>
+            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={copyAndCloseSnippet}>コピーして閉じる</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showSettingsDialog}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div class="w-full max-w-md rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
+        <h2 class="mb-4 text-xl font-bold text-popover-foreground">設定</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-muted-foreground mb-1">起動ショートカット</label>
+            <select bind:value={shortcutSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+              <option value="Ctrl+Space">Ctrl+Space</option>
+              <option value="Alt+Space">Alt+Space</option>
+              <option value="Super+Space">Super+Space</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-muted-foreground mb-1">テーマカラー</label>
+            <select bind:value={themeColorSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+              <option value="zinc">Zinc</option>
+              <option value="slate">Slate</option>
+              <option value="neutral">Neutral</option>
+            </select>
+          </div>
+          <div class="flex justify-end space-x-2 pt-2">
+            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSettingsDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={saveSettings}>保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if showSnippetDialog}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div class="w-full max-w-2xl rounded-xl bg-popover p-6 shadow-2xl border border-border">
@@ -155,8 +262,8 @@
     </div>
   {/if}
 
-  <Command.Root shouldFilter={false} class="w-full max-w-[600px] rounded-xl border border-border shadow-2xl bg-popover text-popover-foreground overflow-hidden">
-    <div class="flex items-center border-b border-border px-3">
+  <Command.Root shouldFilter={false} class="w-full max-w-[600px] rounded-xl !border-[#333] shadow-2xl !bg-[#1e1e1e] text-popover-foreground overflow-hidden">
+    <div class="flex items-center border-b !border-[#333] px-3">
       <div class="flex-1">
         <Command.Input
           bind:ref={inputRef}
@@ -172,6 +279,13 @@
         title="スニペット追加"
       >
         <span class="mr-1">➕</span> スニペット
+      </button>
+      <button
+        class="ml-2 rounded-md bg-secondary/50 p-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0 text-muted-foreground"
+        onclick={() => showSettingsDialog = true}
+        title="設定"
+      >
+        <SettingsIcon class="size-5" />
       </button>
     </div>
 

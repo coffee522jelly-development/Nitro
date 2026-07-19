@@ -9,6 +9,21 @@ pub struct Snippet {
     pub tags: Option<Vec<String>>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AppSettings {
+    pub shortcut: String,
+    pub theme_color: String,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            shortcut: "Ctrl+Space".to_string(),
+            theme_color: "zinc".to_string(),
+        }
+    }
+}
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -87,7 +102,55 @@ fn save_snippet(title: String, content: String, tags: Option<Vec<String>>) -> Re
     Ok(())
 }
 
-use tauri::{tray::TrayIconBuilder, Manager};
+fn get_settings_file_path() -> Option<PathBuf> {
+    let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
+    let path = PathBuf::from(home_dir).join(".nitro");
+    if !path.exists() {
+        let _ = fs::create_dir_all(&path);
+    }
+    Some(path.join("settings.json"))
+}
+
+#[tauri::command]
+fn get_settings() -> AppSettings {
+    let path = match get_settings_file_path() {
+        Some(p) => p,
+        None => return AppSettings::default(),
+    };
+
+    if !path.exists() {
+        return AppSettings::default();
+    }
+
+    match fs::read_to_string(path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_else(|_| AppSettings::default()),
+        Err(_) => AppSettings::default(),
+    }
+}
+
+#[tauri::command]
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String) -> Result<(), String> {
+    let path = get_settings_file_path().ok_or("Failed to get config path")?;
+
+    let old_settings = get_settings();
+    let settings = AppSettings { shortcut: shortcut.clone(), theme_color };
+    let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())?;
+
+    // Unregister old shortcut
+    if let Ok(old_shortcut) = old_settings.shortcut.parse::<tauri_plugin_global_shortcut::Shortcut>() {
+        let _ = app.global_shortcut().unregister(old_shortcut);
+    }
+
+    // Register new shortcut
+    if let Ok(new_shortcut) = shortcut.parse::<tauri_plugin_global_shortcut::Shortcut>() {
+        let _ = app.global_shortcut().register(new_shortcut);
+    }
+
+    Ok(())
+}
+
+use tauri::{menu::{Menu, MenuItem}, tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -95,21 +158,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, shortcut, event| {
+        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, _shortcut, event| {
             if event.state == ShortcutState::Pressed {
-                let ctrl_space = Shortcut::new(
-                    Some(tauri_plugin_global_shortcut::Modifiers::CONTROL),
-                    tauri_plugin_global_shortcut::Code::Space,
-                );
-
-                if shortcut == &ctrl_space {
-                    if let Some(window) = app.get_webview_window("main") {
-                        if window.is_visible().unwrap_or(false) {
-                            let _ = window.hide();
-                        } else {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                if let Some(window) = app.get_webview_window("main") {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.set_focus();
                     }
                 }
             }
@@ -119,21 +175,63 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
+            let toggle_i = MenuItem::with_id(app, "toggle", "開く", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&toggle_i, &quit_i])?;
+
             // Add a simple system tray icon
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "toggle" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        if let Some(window) = tray.app_handle().get_webview_window("main") {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
                 .build(app)?;
 
-            // Register Ctrl+Space shortcut
-            let ctrl_space = Shortcut::new(
-                Some(tauri_plugin_global_shortcut::Modifiers::CONTROL),
-                tauri_plugin_global_shortcut::Code::Space,
-            );
-            app.global_shortcut().register(ctrl_space)?;
+            // Register configured shortcut
+            let settings = get_settings();
+            let parsed_shortcut: Shortcut = settings.shortcut.parse().unwrap_or_else(|_| {
+                Shortcut::new(
+                    Some(tauri_plugin_global_shortcut::Modifiers::CONTROL),
+                    tauri_plugin_global_shortcut::Code::Space,
+                )
+            });
+            let _ = app.global_shortcut().register(parsed_shortcut);
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

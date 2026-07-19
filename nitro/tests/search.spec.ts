@@ -75,4 +75,61 @@ test('can create and search for a code snippet', async ({ page }) => {
   // We expect to see a search result item containing the text "Test Snippet Demo"
   const resultItem = page.getByText("Test Snippet Demo");
   await expect(resultItem).toBeVisible();
+
+  // Test opening the snippet viewer
+  await resultItem.click();
+  const viewerTitle = page.getByRole('heading', { name: "Test Snippet Demo" });
+  await expect(viewerTitle).toBeVisible();
+
+  // Ensure the close button exists
+  const viewerCloseBtn = page.getByRole('button', { name: '閉じる', exact: true });
+  await expect(viewerCloseBtn).toBeVisible();
+});
+
+test('can create and search for a japanese code snippet', async ({ page }) => {
+  await page.addInitScript(() => {
+    const snippets: {title: string, content: string, tags: string[]}[] = [];
+    // @ts-ignore
+    window.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: any) => {
+        if (cmd === "search_files") return [];
+        if (cmd === "get_snippets") return snippets;
+        if (cmd === "save_snippet") {
+          snippets.push({ title: args.title, content: args.content, tags: args.tags });
+          return;
+        }
+        throw new Error(`Unhandled mock command: ${cmd}`);
+      }
+    };
+  });
+
+  await page.goto('/');
+
+  // Open snippet dialog
+  await page.getByTitle("スニペット追加").click();
+
+  // Fill the dialog with Japanese text
+  await page.getByPlaceholder("タイトル").fill("日本語のテスト");
+  await page.getByPlaceholder("スニペット内容").fill("console.log('こんにちは');");
+  await page.getByPlaceholder("タグ (カンマ区切り)").fill("日本語, test");
+
+  // Save it
+  await page.getByRole('button', { name: '保存' }).click();
+
+  // Search using Japanese
+  const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
+  await searchInput.fill("日本語");
+
+  // Result should be visible
+  const resultItem = page.getByText("日本語のテスト");
+  await expect(resultItem).toBeVisible();
+
+  // Open it and check the viewer
+  await resultItem.click();
+  const viewerTitle = page.getByRole('heading', { name: "日本語のテスト" });
+  await expect(viewerTitle).toBeVisible();
+
+  // Tag should be visible in viewer
+  const tagBadge = page.getByText("日本語", { exact: true });
+  await expect(tagBadge).toBeVisible();
 });
