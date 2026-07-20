@@ -29,12 +29,14 @@
   let showSettingsDialog = $state(false);
   let shortcutSetting = $state("Ctrl+Space");
   let themeColorSetting = $state("zinc");
+  let searchDirsSetting = $state("");
 
   async function loadSettings() {
     try {
-      let settings: { shortcut: string, theme_color: string } = await invoke("get_settings");
+      let settings: { shortcut: string, theme_color: string, search_dirs: string[] } = await invoke("get_settings");
       shortcutSetting = settings.shortcut;
       themeColorSetting = settings.theme_color;
+      searchDirsSetting = settings.search_dirs.join("\n");
     } catch (e) {
       console.error("Failed to load settings:", e);
     }
@@ -42,7 +44,8 @@
 
   async function saveSettings() {
     try {
-      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting });
+      let dirs = searchDirsSetting.split("\n").map(d => d.trim()).filter(d => d.length > 0);
+      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, searchDirs: dirs });
       showSettingsDialog = false;
       // Refocus input
       setTimeout(() => inputRef?.focus(), 100);
@@ -222,6 +225,10 @@
               <option value="slate">Slate</option>
               <option value="neutral">Neutral</option>
             </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-muted-foreground mb-1">検索対象ディレクトリ (1行に1つ)</label>
+            <textarea bind:value={searchDirsSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 min-h-[100px]"></textarea>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
             <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSettingsDialog = false}>キャンセル</button>

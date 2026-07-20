@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use walkdir::WalkDir;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Snippet {
@@ -13,13 +14,23 @@ pub struct Snippet {
 pub struct AppSettings {
     pub shortcut: String,
     pub theme_color: String,
+    pub search_dirs: Vec<String>,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
+        let mut default_dirs = Vec::new();
+        if let Some(home_dir) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok() {
+            let desktop_path = PathBuf::from(home_dir).join("Desktop");
+            if let Some(path_str) = desktop_path.to_str() {
+                default_dirs.push(path_str.to_string());
+            }
+        }
+
         Self {
             shortcut: "Ctrl+Space".to_string(),
             theme_color: "zinc".to_string(),
+            search_dirs: default_dirs,
         }
     }
 }
@@ -37,26 +48,34 @@ fn search_files(query: String) -> Vec<String> {
     }
 
     let mut results = Vec::new();
-    let home_dir = match std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
-        Ok(dir) => PathBuf::from(dir),
-        Err(_) => return vec![],
-    };
-
-    // For MVP, we will just scan the Desktop directory for speed
-    // as scanning the entire home directory without an index is too slow for 50ms requirement
-    let target_dir = home_dir.join("Desktop");
-
     let query_lower = query.to_lowercase();
 
-    if let Ok(entries) = fs::read_dir(&target_dir) {
-        for entry in entries.flatten() {
-            if let Ok(name) = entry.file_name().into_string() {
+    let settings = get_settings();
+    let mut count = 0;
+    let max_results = 50;
+
+    for dir_str in settings.search_dirs {
+        let target_dir = PathBuf::from(&dir_str);
+        if !target_dir.exists() || !target_dir.is_dir() {
+            continue;
+        }
+
+        // Limit depth to avoid taking too long, e.g. depth 3
+        for entry in WalkDir::new(target_dir).max_depth(3).into_iter().filter_map(|e| e.ok()) {
+            if count >= max_results {
+                break;
+            }
+            if let Some(name) = entry.file_name().to_str() {
                 if name.to_lowercase().contains(&query_lower) {
                     if let Some(path_str) = entry.path().to_str() {
                         results.push(path_str.to_string());
+                        count += 1;
                     }
                 }
             }
+        }
+        if count >= max_results {
+            break;
         }
     }
 
@@ -129,11 +148,14 @@ fn get_settings() -> AppSettings {
 }
 
 #[tauri::command]
-fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, search_dirs: Option<Vec<String>>) -> Result<(), String> {
     let path = get_settings_file_path().ok_or("Failed to get config path")?;
 
     let old_settings = get_settings();
-    let settings = AppSettings { shortcut: shortcut.clone(), theme_color };
+
+    let dirs = search_dirs.unwrap_or(old_settings.search_dirs.clone());
+
+    let settings = AppSettings { shortcut: shortcut.clone(), theme_color, search_dirs: dirs };
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
 
