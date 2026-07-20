@@ -221,9 +221,16 @@
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">テーマカラー</label>
             <select bind:value={themeColorSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
-              <option value="zinc">Zinc</option>
-              <option value="slate">Slate</option>
-              <option value="neutral">Neutral</option>
+              <option value="zinc">ジンク (Zinc)</option>
+              <option value="slate">スレート (Slate)</option>
+              <option value="neutral">ニュートラル (Neutral)</option>
+              <option value="red">レッド (Red)</option>
+              <option value="blue">ブルー (Blue)</option>
+              <option value="green">グリーン (Green)</option>
+              <option value="yellow">イエロー (Yellow)</option>
+              <option value="orange">オレンジ (Orange)</option>
+              <option value="purple">パープル (Purple)</option>
+              <option value="pink">ピンク (Pink)</option>
             </select>
           </div>
           <div>
@@ -269,7 +276,7 @@
     </div>
   {/if}
 
-  <Command.Root shouldFilter={false} class="w-full max-w-[600px] rounded-xl !border-[#333] shadow-2xl !bg-[#1e1e1e] text-popover-foreground overflow-hidden">
+  <Command.Root shouldFilter={false} class="w-full max-w-[800px] rounded-xl !border-[#333] shadow-2xl !bg-[#1e1e1e] text-popover-foreground overflow-hidden">
     <div class="flex items-center border-b !border-[#333] px-3">
       <div class="flex-1">
         <Command.Input
@@ -277,7 +284,7 @@
           bind:value={query}
           placeholder="ファイルやスニペットを検索..."
           autofocus
-          class="text-xl border-0 ring-0 focus:ring-0 shadow-none h-14 px-2"
+          class="text-xl border-0 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-14 px-2"
         />
       </div>
       <button
@@ -300,6 +307,7 @@
       <Command.List>
         {#each results as result, i}
           <Command.Item
+            value={result.type === "snippet" ? `snippet-${result.title}` : `file-${result.path}`}
             onSelect={() => { executeResult(result); }}
           >
             {#if result.type === "snippet"}
