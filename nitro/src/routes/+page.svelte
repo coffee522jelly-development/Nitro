@@ -97,6 +97,11 @@
       query = "";
       results = [];
       getCurrentWindow().hide();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      // Ensure focus is on the input so the Command component can process arrow keys
+      if (inputRef && document.activeElement !== inputRef) {
+        inputRef.focus();
+      }
     }
   }
 
