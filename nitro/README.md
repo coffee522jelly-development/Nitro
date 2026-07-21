@@ -1,7 +1,52 @@
-# Tauri + SvelteKit + TypeScript
+# Nitro (ナイトロ)
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
+> Search at the speed of thought. Fueled by coffee.
 
-## Recommended IDE Setup
+Nitroは、PC内のファイルやコードスニペットを瞬時に検索し、キーボード操作だけで目的の情報へ到達するための高速ローカル検索ランチャーです。開発者の日常作業を中断しない検索体験を提供することを目的としています。
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
+## 主な機能 (MVP Phase 1)
+
+*   **高速ファイル検索:** 指定したディレクトリ（デフォルトはデスクトップ）内のファイルを高速に検索します。
+*   **スニペット管理:** よく使うコードスニペットやテキストを保存し、タグで検索してクリップボードにコピーできます。
+*   **グローバルショートカット:** `Ctrl+Space`（または設定したキー）でいつでもどこでも検索ウィンドウを呼び出せます。
+*   **カスタマイズ可能な設定:** ショートカットキーの変更、テーマカラー（全10色）、検索対象ディレクトリの指定がUIから行えます。
+*   **システムトレイ常駐:** バックグラウンドで待機し、必要な時にすぐに呼び出せます。
+*   **キーボードフル対応:** 上下矢印キーでの選択や、Enterキーでのファイルオープン（OS標準のアプリケーションで開く）に完全対応。
+
+## 技術スタック
+
+*   **フロントエンド:** Svelte 5 (SvelteKit), Tailwind CSS v3, shadcn-svelte, bits-ui
+*   **バックエンド:** Rust, Tauri v2
+*   **ファイル監視/検索:** `walkdir` (将来的にTantivyとSQLiteによる全文検索・インデックスを導入予定)
+
+## セットアップとビルド方法
+
+このプロジェクトをローカルでビルド・開発するための手順です。Node.js と Rust (Cargo) の環境が必要です。
+
+```bash
+# リポジトリのクローンとディレクトリへの移動
+cd nitro
+
+# 依存関係のインストール
+npm install
+
+# 開発サーバーの起動 (ホットリロード対応)
+npm run tauri dev
+
+# プロダクションビルドの作成
+npm run tauri build
+```
+
+## 使い方
+
+1.  アプリケーションを起動すると、システムトレイに常駐します。
+2.  `Ctrl+Space`（デフォルト）を押すと、画面中央に検索パレットが表示されます。
+3.  **ファイル検索:** キーワードを入力すると、設定したディレクトリ内を検索します。矢印キーで選択し、`Enter` でファイルを開きます。
+4.  **スニペット登録:** 検索窓の横にある「スニペット」ボタンをクリックし、タイトル、内容、タグを入力して `Ctrl+Enter` で保存します。
+5.  **設定変更:** 検索窓の横にある「歯車」アイコンをクリックすると、起動ショートカットやテーマカラー、検索対象ディレクトリ（改行区切りで複数指定可能）を変更できます。
+
+## 今後のロードマップ (Phase 2〜)
+
+*   SQLiteを利用したインデックスの保存と検索ランキング機能
+*   Tantivyによる高速な全文検索
+*   コマンドランチャー機能（例: `> open project`）
