@@ -178,7 +178,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<main class="container">
+<main class="container theme-{themeColorSetting}">
   {#if viewingSnippet}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div class="w-full max-w-2xl rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
