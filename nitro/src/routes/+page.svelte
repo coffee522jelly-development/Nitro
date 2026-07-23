@@ -375,14 +375,14 @@
   }
 
   /* Scrollbar styling */
-  :global(.results::-webkit-scrollbar) {
-    width: 8px;
+  :global(::-webkit-scrollbar) {
+    width: 4px;
   }
-  :global(.results::-webkit-scrollbar-track) {
-    background: #1e1e1e;
+  :global(::-webkit-scrollbar-track) {
+    background: #09090b;
   }
-  :global(.results::-webkit-scrollbar-thumb) {
-    background: #444;
+  :global(::-webkit-scrollbar-thumb) {
+    background: #27272a;
     border-radius: 4px;
   }
 
