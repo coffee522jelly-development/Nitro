@@ -204,14 +204,14 @@
 
 <main class="container theme-{themeColorSetting}">
   {#if viewingSnippet}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-2xl rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
-        <h2 class="mb-4 text-xl font-bold text-popover-foreground">{viewingSnippet.title}</h2>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div class="w-full max-w-2xl bg-zinc-900 p-6 shadow-xl border border-zinc-800">
+        <h2 class="mb-4 text-xl font-bold text-zinc-100">{viewingSnippet.title}</h2>
         <div class="space-y-4">
           <div>
             <textarea
               readonly
-              class="flex min-h-[250px] w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+              class="flex min-h-[250px] w-full bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-300 focus-visible:outline-none focus-visible:ring-0 border-0 disabled:cursor-not-allowed disabled:opacity-50"
               onkeydown={(e) => { if (e.key === 'Escape') viewingSnippet = null; else if (e.key === 'Enter') copyAndCloseSnippet(); }}
             >{viewingSnippet.content}</textarea>
           </div>
@@ -235,21 +235,21 @@
   {/if}
 
   {#if showSettingsDialog}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-md rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
-        <h2 class="mb-4 text-xl font-bold text-popover-foreground">設定</h2>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div class="w-full max-w-md bg-zinc-900 p-6 shadow-xl border border-zinc-800">
+        <h2 class="mb-4 text-xl font-bold text-zinc-100">設定</h2>
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-muted-foreground mb-1">起動ショートカット</label>
-            <select bind:value={shortcutSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+            <label class="block text-sm font-medium text-zinc-400 mb-1">起動ショートカット</label>
+            <select bind:value={shortcutSetting} class="w-full bg-zinc-950 px-3 py-2 text-sm text-zinc-200 focus-visible:outline-none focus-visible:ring-0 border-0">
               <option value="Ctrl+Space">Ctrl+Space</option>
               <option value="Alt+Space">Alt+Space</option>
               <option value="Super+Space">Super+Space</option>
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-muted-foreground mb-1">テーマカラー</label>
-            <select bind:value={themeColorSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+            <label class="block text-sm font-medium text-zinc-400 mb-1">テーマカラー</label>
+            <select bind:value={themeColorSetting} class="w-full bg-zinc-950 px-3 py-2 text-sm text-zinc-200 focus-visible:outline-none focus-visible:ring-0 border-0">
               <option value="zinc">ジンク (Zinc)</option>
               <option value="slate">スレート (Slate)</option>
               <option value="neutral">ニュートラル (Neutral)</option>
@@ -263,12 +263,12 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-muted-foreground mb-1">検索対象ディレクトリ (1行に1つ)</label>
-            <textarea bind:value={searchDirsSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 min-h-[100px]"></textarea>
+            <label class="block text-sm font-medium text-zinc-400 mb-1">検索対象ディレクトリ (1行に1つ)</label>
+            <textarea bind:value={searchDirsSetting} class="w-full bg-zinc-950 px-3 py-2 text-sm text-zinc-200 focus-visible:outline-none focus-visible:ring-0 min-h-[100px] border-0"></textarea>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSettingsDialog = false}>キャンセル</button>
-            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={saveSettings}>保存</button>
+            <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => showSettingsDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={saveSettings}>保存</button>
           </div>
         </div>
       </div>
@@ -276,55 +276,55 @@
   {/if}
 
   {#if showSnippetDialog}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-2xl rounded-xl bg-popover p-6 shadow-2xl border border-border">
-        <h2 class="mb-4 text-xl font-bold text-popover-foreground">新しいスニペット</h2>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div class="w-full max-w-2xl bg-zinc-900 p-6 shadow-xl border border-zinc-800">
+        <h2 class="mb-4 text-xl font-bold text-zinc-100">新しいスニペット</h2>
         <div class="space-y-4">
           <div>
             <!-- svelte-ignore a11y_autofocus -->
-            <Input bind:value={newSnippetTitle} placeholder="タイトル" class="w-full font-mono text-sm" autofocus onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; }}/>
+            <Input bind:value={newSnippetTitle} placeholder="タイトル" class="w-full font-mono text-sm border-0 bg-zinc-950 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-0" autofocus onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; }}/>
           </div>
           <div>
             <textarea
               bind:value={newSnippetContent}
               placeholder="スニペット内容"
-              class="flex min-h-[250px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              class="flex min-h-[250px] w-full bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-0 border-0 disabled:cursor-not-allowed disabled:opacity-50"
               onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}
             ></textarea>
           </div>
           <div>
-            <Input bind:value={newSnippetTags} placeholder="タグ (カンマ区切り)" class="w-full font-mono text-sm" onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}/>
-            <p class="mt-2 text-xs text-muted-foreground">保存するには Ctrl+Enter を押してください</p>
+            <Input bind:value={newSnippetTags} placeholder="タグ (カンマ区切り)" class="w-full font-mono text-sm border-0 bg-zinc-950 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-0" onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}/>
+            <p class="mt-2 text-xs text-zinc-500">保存するには Ctrl+Enter を押してください</p>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSnippetDialog = false}>キャンセル</button>
-            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={handleSaveSnippet}>OK</button>
+            <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => showSnippetDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={handleSaveSnippet}>OK</button>
           </div>
         </div>
       </div>
     </div>
   {/if}
 
-  <Command.Root shouldFilter={false} class="w-full max-w-[800px] rounded-xl !border-[#333] shadow-2xl !bg-[#1e1e1e] text-popover-foreground overflow-hidden">
-    <div class="flex items-center border-b !border-[#333] px-3">
+  <Command.Root shouldFilter={false} class="w-full h-full border-0 !bg-zinc-950 text-zinc-100 overflow-hidden">
+    <div class="flex items-center border-b border-zinc-800 px-3">
       <div class="flex-1">
         <Command.Input
           bind:ref={inputRef}
           bind:value={query}
           placeholder="ファイルやスニペットを検索..."
           autofocus
-          class="text-xl border-0 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-14 px-2"
+          class="text-xl border-0 bg-transparent text-zinc-100 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-16 px-2"
         />
       </div>
       <button
-        class="ml-2 rounded-md bg-secondary/50 px-3 py-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0"
+        class="ml-2 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 transition-colors flex items-center shrink-0"
         onclick={() => showSnippetDialog = true}
         title="スニペット追加"
       >
         <span class="mr-1">➕</span> スニペット
       </button>
       <button
-        class="ml-2 rounded-md bg-secondary/50 p-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0 text-muted-foreground"
+        class="ml-1 rounded-md p-2 text-sm font-medium text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800/50 transition-colors flex items-center shrink-0"
         onclick={() => showSettingsDialog = true}
         title="設定"
       >
@@ -367,7 +367,7 @@
   .container {
     width: 100vw;
     height: 100vh;
-    padding: 20px;
+    padding: 0;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;

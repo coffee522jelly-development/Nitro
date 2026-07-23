@@ -12,8 +12,8 @@
 	}: CommandPrimitive.InputProps = $props();
 </script>
 
-<div data-slot="command-input-wrapper" class="p-1 pb-0 w-full">
-	<InputGroup.Root class="!bg-[#1e1e1e] !border-[#333] has-[[data-slot=input-group-control]:focus-visible]:!border-[#333] !h-14 !rounded-lg !shadow-none !ring-0 focus-within:!ring-0 has-[[data-slot=input-group-control]:focus-visible]:!ring-0 *:data-[slot=input-group-addon]:!pl-2">
+<div data-slot="command-input-wrapper" class="w-full">
+	<InputGroup.Root class="!border-0 !h-16 !rounded-none !shadow-none !ring-0 focus-within:!ring-0 has-[[data-slot=input-group-control]:focus-visible]:!ring-0 bg-transparent *:data-[slot=input-group-addon]:!pl-4">
 		<CommandPrimitive.Input
 			{value}
 			data-slot="command-input"
