@@ -11,7 +11,7 @@ test('arrow keys and enter can open a file', async ({ page }) => {
         if (cmd === "search_files") return ["/mock/path/test_folder", "/mock/path/test_document.txt"];
         if (cmd === "get_snippets") return [];
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: ["/mock/path"] };
-        if (cmd === "plugin:opener|open") {
+        if (cmd === "plugin:opener|open" || cmd === "plugin:opener|open_path") {
           // @ts-ignore
           window.__OPENER_CALLED = true;
           // @ts-ignore

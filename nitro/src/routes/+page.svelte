@@ -2,6 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import { openPath } from "@tauri-apps/plugin-opener";
   import { onMount } from "svelte";
   import { Input } from "$lib/components/ui/input";
   import * as Command from "$lib/components/ui/command";
@@ -108,7 +109,7 @@
   async function executeResult(result: SearchResult) {
     try {
       if (result.type === "file") {
-        await invoke("plugin:opener|open", { path: result.path });
+        await openPath(result.path);
       } else if (result.type === "snippet") {
         viewingSnippet = {
           title: result.title,
@@ -173,6 +174,29 @@
         inputRef.focus();
       }
     });
+
+    let wheelTimeout: ReturnType<typeof setTimeout> | null = null;
+    const handleWheel = (e: WheelEvent) => {
+      if (showSnippetDialog || viewingSnippet || showSettingsDialog) return;
+      if (results.length === 0 || !inputRef) return;
+      e.preventDefault();
+
+      if (wheelTimeout) return;
+      wheelTimeout = setTimeout(() => {
+        wheelTimeout = null;
+      }, 50); // debounce scroll
+
+      if (e.deltaY > 0) {
+        inputRef.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+      } else if (e.deltaY < 0) {
+        inputRef.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+      }
+    };
+    window.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+    };
   });
 </script>
 
@@ -274,7 +298,7 @@
           </div>
           <div class="flex justify-end space-x-2 pt-2">
             <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSnippetDialog = false}>キャンセル</button>
-            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={handleSaveSnippet}>保存</button>
+            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={handleSaveSnippet}>OK</button>
           </div>
         </div>
       </div>

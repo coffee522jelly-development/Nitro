@@ -64,7 +64,7 @@ test('can create and search for a code snippet', async ({ page }) => {
   await page.getByPlaceholder("タグ (カンマ区切り)").fill("test, e2e, ts");
 
   // Save it
-  await page.getByRole('button', { name: '保存' }).click();
+  await page.getByRole('button', { name: 'OK' }).click();
 
   // Ensure dialog closed
   await expect(page.getByText("新しいスニペット")).not.toBeVisible();
@@ -114,7 +114,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await page.getByPlaceholder("タグ (カンマ区切り)").fill("日本語, test");
 
   // Save it
-  await page.getByRole('button', { name: '保存' }).click();
+  await page.getByRole('button', { name: 'OK' }).click();
 
   // Search using Japanese
   const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
