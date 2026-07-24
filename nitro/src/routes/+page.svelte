@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
   import { openPath } from "@tauri-apps/plugin-opener";
@@ -164,6 +165,14 @@
 
   onMount(() => {
     loadSettings();
+
+    const unlisten = listen("context_menu_open_selected", async () => {
+      // Execute the result that was right-clicked
+      if ((window as any).__CONTEXT_MENU_RESULT) {
+        executeResult((window as any).__CONTEXT_MENU_RESULT);
+        (window as any).__CONTEXT_MENU_RESULT = null;
+      }
+    });
     if (inputRef) {
       inputRef.focus();
     }
@@ -196,6 +205,7 @@
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
+      unlisten.then(f => f());
     };
   });
 </script>
@@ -338,6 +348,13 @@
           <Command.Item
             value={result.type === "snippet" ? `snippet-${result.title}` : `file-${result.path}`}
             onSelect={() => { executeResult(result); }}
+            oncontextmenu={(e) => {
+              e.preventDefault();
+              // Store the result globally or handle it properly.
+              // Since we just need to execute THIS result when menu is clicked:
+              (window as any).__CONTEXT_MENU_RESULT = result;
+              invoke("show_context_menu", { path: result.type === "file" ? result.path : result.title });
+            }}
           >
             {#if result.type === "snippet"}
               <span class="file-icon">📋</span>

@@ -1,3 +1,4 @@
+use tauri::Emitter;
 use std::fs;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
@@ -197,6 +198,12 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
+            app.on_menu_event(move |app, event| {
+                if event.id() == "open_context_menu" {
+                    let _ = app.emit("context_menu_open_selected", ());
+                }
+            });
+
             let toggle_i = MenuItem::with_id(app, "toggle", "開く", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&toggle_i, &quit_i])?;
@@ -253,7 +260,21 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, show_context_menu])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn show_context_menu(app: tauri::AppHandle, _path: String) {
+    use tauri::menu::{Menu, MenuItem};
+    use tauri::Manager;
+
+    let _app_handle = app.clone();
+    let open_i = MenuItem::with_id(&app, "open_context_menu", "既定のアプリで開く", true, None::<&str>).unwrap();
+    let menu = Menu::with_items(&app, &[&open_i]).unwrap();
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.popup_menu(&menu);
+    }
 }

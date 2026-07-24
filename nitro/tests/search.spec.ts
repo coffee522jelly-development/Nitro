@@ -33,7 +33,7 @@ test('can create and search for a code snippet', async ({ page }) => {
     const snippets: {title: string, content: string, tags: string[]}[] = [];
 
     // @ts-ignore
-    window.__TAURI_INTERNALS__ = {
+    (window as any).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: any) => {
         if (cmd === "search_files") {
           return [];
@@ -90,7 +90,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await page.addInitScript(() => {
     const snippets: {title: string, content: string, tags: string[]}[] = [];
     // @ts-ignore
-    window.__TAURI_INTERNALS__ = {
+    (window as any).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: any) => {
         if (cmd === "search_files") return [];
         if (cmd === "get_snippets") return snippets;
