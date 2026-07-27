@@ -8,6 +8,8 @@
   import { Input } from "$lib/components/ui/input";
   import * as Command from "$lib/components/ui/command";
   import SettingsIcon from "lucide-svelte/icons/settings";
+  import FileTextIcon from "lucide-svelte/icons/file-text";
+  import FileIcon from "lucide-svelte/icons/file";
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
@@ -357,13 +359,13 @@
             }}
           >
             {#if result.type === "snippet"}
-              <span class="file-icon">📋</span>
-              <span class="file-name font-medium">{result.title}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2">Snippet</span>
+              <FileTextIcon class="size-4 mr-3 shrink-0 text-zinc-400" />
+              <span class="file-name font-medium text-zinc-200">{result.title}</span>
+              <span class="file-path text-sm text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">Snippet</span>
             {:else}
-              <span class="file-icon">📄</span>
-              <span class="file-name font-medium">{result.name}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap">{result.path}</span>
+              <FileIcon class="size-4 mr-3 shrink-0 text-zinc-400" />
+              <span class="file-name font-medium text-zinc-200">{result.name}</span>
+              <span class="file-path text-sm text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">{result.path}</span>
             {/if}
           </Command.Item>
         {/each}
@@ -401,10 +403,5 @@
   :global(::-webkit-scrollbar-thumb) {
     background: #27272a;
     border-radius: 4px;
-  }
-
-  .file-icon {
-    margin-right: 12px;
-    font-size: 16px;
   }
 </style>
