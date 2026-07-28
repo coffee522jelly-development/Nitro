@@ -53,7 +53,7 @@ fn search_files(query: String) -> Vec<String> {
 
     let settings = get_settings();
     let mut count = 0;
-    let max_results = 50;
+    let max_results = 500;
 
     for dir_str in settings.search_dirs {
         let target_dir = PathBuf::from(&dir_str);
@@ -61,8 +61,8 @@ fn search_files(query: String) -> Vec<String> {
             continue;
         }
 
-        // Limit depth to avoid taking too long, e.g. depth 3
-        for entry in WalkDir::new(target_dir).max_depth(3).into_iter().filter_map(|e| e.ok()) {
+        // Search fully through the specific target folder without depth limits
+        for entry in WalkDir::new(target_dir).into_iter().filter_map(|e| e.ok()) {
             if count >= max_results {
                 break;
             }
