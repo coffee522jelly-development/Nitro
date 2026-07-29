@@ -38,6 +38,12 @@ test('can create and search for a code snippet', async ({ page }) => {
         if (cmd === "search_files") {
           return [];
         }
+                        if (cmd === "focus_window") {
+          return Promise.resolve();
+        }
+        if (cmd === "app_get_open_windows") {
+          return Promise.resolve([]);
+        }
         if (cmd === "get_snippets") {
           return snippets;
         }
@@ -93,6 +99,12 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
     (window as any).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: any) => {
         if (cmd === "search_files") return [];
+                        if (cmd === "focus_window") {
+          return Promise.resolve();
+        }
+        if (cmd === "app_get_open_windows") {
+          return Promise.resolve([]);
+        }
         if (cmd === "get_snippets") return snippets;
         if (cmd === "save_snippet") {
           snippets.push({ title: args.title, content: args.content, tags: args.tags });

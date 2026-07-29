@@ -9,6 +9,12 @@ test('arrow keys and enter can open a file', async ({ page }) => {
     (window as any).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: any) => {
         if (cmd === "search_files") return ["/mock/path/test_folder", "/mock/path/test_document.txt"];
+                        if (cmd === "focus_window") {
+          return Promise.resolve();
+        }
+        if (cmd === "app_get_open_windows") {
+          return Promise.resolve([]);
+        }
         if (cmd === "get_snippets") return [];
         if (cmd === "plugin:event|listen") {
           return Promise.resolve(Math.floor(Math.random() * 1000));

@@ -260,9 +260,66 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, show_context_menu])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, show_context_menu, app_get_open_windows, focus_window])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+
+#[derive(serde::Serialize, Clone)]
+pub struct AppWindow {
+    pub id: u32,
+    pub title: String,
+    pub app_name: String,
+}
+
+#[tauri::command]
+fn app_get_open_windows() -> Vec<AppWindow> {
+    use x_win::get_open_windows;
+
+    let mut results = Vec::new();
+    if let Ok(windows) = get_open_windows() {
+        for window in windows {
+            results.push(AppWindow {
+                id: window.id,
+                title: window.title.clone(),
+                app_name: window.info.name.clone(),
+            });
+        }
+    }
+    results
+}
+
+#[tauri::command]
+fn focus_window(id: u32, app_name: String) {
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+        let id_hex = format!("0x{:x}", id);
+        let _ = Command::new("wmctrl")
+            .args(&["-i", "-a", &id_hex])
+            .spawn();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        let _ = Command::new("osascript")
+            .args(&["-e", &format!("tell application \"{}\" to activate", app_name)])
+            .spawn();
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        // A PowerShell script or invoking a tiny crate would be ideal here.
+        // Or if we compile on Windows we use windows-rs bindings.
+        // For cross-platform simple script without adding huge dependencies:
+        let _ = Command::new("powershell")
+            .args(&[
+                "-Command",
+                &format!("(New-Object -ComObject WScript.Shell).AppActivate('{}')", app_name)
+            ])
+            .spawn();
+    }
 }
 
 #[tauri::command]

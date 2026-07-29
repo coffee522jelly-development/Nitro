@@ -10,11 +10,13 @@
   import SettingsIcon from "lucide-svelte/icons/settings";
   import FileTextIcon from "lucide-svelte/icons/file-text";
   import FileIcon from "lucide-svelte/icons/file";
+  import AppWindowIcon from "lucide-svelte/icons/app-window";
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
     | { type: "file"; path: string; name: string }
-    | { type: "snippet"; title: string; content: string; tags?: string[] };
+    | { type: "snippet"; title: string; content: string; tags?: string[] }
+    | { type: "window"; id: number; title: string; app_name: string };
 
   let query = $state("");
   let results: SearchResult[] = $state([]);
@@ -68,10 +70,14 @@
 
     try {
       let snippets: Snippet[] = await invoke<Snippet[]>("get_snippets").catch(() => []);
+      let activeWindows: any[] = await invoke<any[]>("app_get_open_windows").catch(() => []);
 
       if (query.trim() === "") {
-        // If empty query, just show all snippets
-        results = snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
+        // If empty query, show windows then snippets
+        results = [
+          ...activeWindows.map(w => ({ type: "window" as const, id: w.id, title: w.title, app_name: w.app_name })),
+          ...snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }))
+        ];
       } else {
         let files: string[] = await invoke<string[]>("search_files", { query }).catch(() => []);
 
@@ -113,6 +119,11 @@
     try {
       if (result.type === "file") {
         await openPath(result.path);
+      } else if (result.type === "window") {
+        await invoke("focus_window", { id: result.id, appName: result.app_name });
+        query = "";
+        results = [];
+        await getCurrentWindow().hide();
       } else if (result.type === "snippet") {
         viewingSnippet = {
           title: result.title,
@@ -348,7 +359,7 @@
       <Command.List>
         {#each results as result, i}
           <Command.Item
-            value={result.type === "snippet" ? `snippet-${result.title}` : `file-${result.path}`}
+            value={result.type === "snippet" ? `snippet-${result.title}` : (result.type === "window" ? `window-${result.id}` : `file-${(result as any).path}`)}
             onSelect={() => { executeResult(result); }}
             oncontextmenu={(e) => {
               e.preventDefault();
@@ -358,14 +369,18 @@
               invoke("show_context_menu", { path: result.type === "file" ? result.path : result.title });
             }}
           >
-            {#if result.type === "snippet"}
-              <FileTextIcon class="size-4 mr-3 shrink-0 text-zinc-400" />
-              <span class="file-name font-medium text-zinc-200">{result.title}</span>
-              <span class="file-path text-sm text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">Snippet</span>
+            {#if result.type === "window"}
+              <AppWindowIcon class="size-4 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400" />
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-zinc-200">{(result as any).app_name}</span>
+              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">{(result as any).title}</span>
+            {:else if result.type === "snippet"}
+              <FileTextIcon class="size-4 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400" />
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-zinc-200">{result.title}</span>
+              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">Snippet</span>
             {:else}
-              <FileIcon class="size-4 mr-3 shrink-0 text-zinc-400" />
-              <span class="file-name font-medium text-zinc-200">{result.name}</span>
-              <span class="file-path text-sm text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">{result.path}</span>
+              <FileIcon class="size-4 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400" />
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-zinc-200">{(result as any).name}</span>
+              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">{(result as any).path}</span>
             {/if}
           </Command.Item>
         {/each}
