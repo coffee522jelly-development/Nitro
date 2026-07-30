@@ -11,6 +11,8 @@
   import FileTextIcon from "lucide-svelte/icons/file-text";
   import FileIcon from "lucide-svelte/icons/file";
   import AppWindowIcon from "lucide-svelte/icons/app-window";
+  import SearchIcon from "lucide-svelte/icons/search";
+  import PlusIcon from "lucide-svelte/icons/plus";
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
@@ -328,26 +330,27 @@
     </div>
   {/if}
 
-  <Command.Root shouldFilter={false} class="w-full h-full border-0 !bg-zinc-950 text-zinc-100 overflow-hidden">
-    <div class="flex items-center border-b border-zinc-800 px-3">
+  <Command.Root shouldFilter={false} class="w-full h-full border-0 !bg-zinc-950 text-zinc-100 overflow-hidden flex flex-col">
+    <div class="flex items-center border-b border-zinc-800/80 px-4 bg-zinc-950">
+      <SearchIcon class="size-5 text-zinc-500 mr-2 shrink-0" />
       <div class="flex-1">
         <Command.Input
           bind:ref={inputRef}
           bind:value={query}
           placeholder="ファイルやスニペットを検索..."
           autofocus
-          class="text-xl border-0 bg-transparent text-zinc-100 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-16 px-2"
+          class="text-lg border-0 bg-transparent text-zinc-100 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-16 px-1 font-medium placeholder:text-zinc-600 tracking-wide"
         />
       </div>
       <button
-        class="ml-2 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 transition-colors flex items-center shrink-0"
+        class="ml-3 flex items-center justify-center rounded-full p-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 transition-all duration-200"
         onclick={() => showSnippetDialog = true}
         title="スニペット追加"
       >
-        <span class="mr-1">➕</span> スニペット
+        <PlusIcon class="size-5" />
       </button>
       <button
-        class="ml-1 rounded-md p-2 text-sm font-medium text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800/50 transition-colors flex items-center shrink-0"
+        class="ml-1 flex items-center justify-center rounded-full p-2.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 transition-all duration-200"
         onclick={() => showSettingsDialog = true}
         title="設定"
       >
@@ -356,7 +359,7 @@
     </div>
 
     {#if results.length > 0}
-      <Command.List>
+      <Command.List class="flex-1 overflow-y-auto px-2 py-2 space-y-1">
         {#each results as result, i}
           <Command.Item
             value={result.type === "snippet" ? `snippet-${result.title}` : (result.type === "window" ? `window-${result.id}` : `file-${(result as any).path}`)}
@@ -369,19 +372,21 @@
               invoke("show_context_menu", { path: result.type === "file" ? result.path : result.title });
             }}
           >
+            <div class="flex items-center w-full px-2 py-2">
             {#if result.type === "window"}
-              <AppWindowIcon class="size-4 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400" />
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-zinc-200">{(result as any).app_name}</span>
-              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">{(result as any).title}</span>
+              <AppWindowIcon class="size-5 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400 transition-colors" />
+              <span class="file-name font-medium text-base tracking-wide group-data-[selected]/command-item:text-primary-foreground text-zinc-200 transition-colors">{(result as any).app_name}</span>
+              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4 transition-colors">{(result as any).title}</span>
             {:else if result.type === "snippet"}
-              <FileTextIcon class="size-4 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400" />
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-zinc-200">{result.title}</span>
-              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">Snippet</span>
+              <FileTextIcon class="size-5 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400 transition-colors" />
+              <span class="file-name font-medium text-base tracking-wide group-data-[selected]/command-item:text-primary-foreground text-zinc-200 transition-colors">{result.title}</span>
+              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4 transition-colors">Snippet</span>
             {:else}
-              <FileIcon class="size-4 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400" />
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-zinc-200">{(result as any).name}</span>
-              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4">{(result as any).path}</span>
+              <FileIcon class="size-5 mr-3 shrink-0 group-data-[selected]/command-item:text-primary-foreground text-zinc-400 transition-colors" />
+              <span class="file-name font-medium text-base tracking-wide group-data-[selected]/command-item:text-primary-foreground text-zinc-200 transition-colors">{(result as any).name}</span>
+              <span class="file-path text-sm group-data-[selected]/command-item:text-primary-foreground/70 text-zinc-500 ml-auto overflow-hidden text-ellipsis whitespace-nowrap pl-4 transition-colors">{(result as any).path}</span>
             {/if}
+            </div>
           </Command.Item>
         {/each}
       </Command.List>

@@ -61,7 +61,7 @@ fn search_files(query: String) -> Vec<String> {
             continue;
         }
 
-        // Search fully through the specific target folder without depth limits
+        // For massive folders, we should only return a slice. To not freeze we cap max_results tightly.
         for entry in WalkDir::new(target_dir).into_iter().filter_map(|e| e.ok()) {
             if count >= max_results {
                 break;
@@ -291,6 +291,7 @@ fn app_get_open_windows() -> Vec<AppWindow> {
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 fn focus_window(id: u32, app_name: String) {
     #[cfg(target_os = "linux")]
     {
@@ -303,21 +304,19 @@ fn focus_window(id: u32, app_name: String) {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
+        let safe_name = app_name.replace('"', "");
+        let script = format!("tell application \"{}\" to activate", safe_name);
         let _ = Command::new("osascript")
-            .args(&["-e", &format!("tell application \"{}\" to activate", app_name)])
+            .args(&["-e", &script])
             .spawn();
     }
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
-        // A PowerShell script or invoking a tiny crate would be ideal here.
-        // Or if we compile on Windows we use windows-rs bindings.
-        // For cross-platform simple script without adding huge dependencies:
+        let safe_name = app_name.replace("'", "''");
+        let script = format!("(New-Object -ComObject WScript.Shell).AppActivate('{}')", safe_name);
         let _ = Command::new("powershell")
-            .args(&[
-                "-Command",
-                &format!("(New-Object -ComObject WScript.Shell).AppActivate('{}')", app_name)
-            ])
+            .args(&["-Command", &script])
             .spawn();
     }
 }

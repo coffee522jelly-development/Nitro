@@ -1,6 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 test('search palette handles empty and populated queries', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: any) => {
+        if (cmd === "search_files") return [];
+        if (cmd === "focus_window") return Promise.resolve();
+        if (cmd === "app_get_open_windows") return Promise.resolve([]);
+        if (cmd === "get_snippets") return [];
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
+        return null;
+      }
+    };
+  });
+
   // Go to the Tauri app locally
   await page.goto('/');
 
@@ -47,11 +62,17 @@ test('can create and search for a code snippet', async ({ page }) => {
         if (cmd === "get_snippets") {
           return snippets;
         }
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
         if (cmd === "save_snippet") {
           snippets.push({ title: args.title, content: args.content, tags: args.tags });
           return;
         }
-        throw new Error(`Unhandled mock command: ${cmd}`);
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
+        return null;
       }
     };
   });
@@ -106,11 +127,17 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
           return Promise.resolve([]);
         }
         if (cmd === "get_snippets") return snippets;
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
         if (cmd === "save_snippet") {
           snippets.push({ title: args.title, content: args.content, tags: args.tags });
           return;
         }
-        throw new Error(`Unhandled mock command: ${cmd}`);
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
+        return null;
       }
     };
   });
