@@ -1,7 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { listen } from "@tauri-apps/api/event";
-  import { getCurrentWindow } from '@tauri-apps/api/window';
+    import { getCurrentWindow } from '@tauri-apps/api/window';
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
     import { onMount } from "svelte";
   import { Input } from "$lib/components/ui/input";
@@ -39,13 +38,15 @@
   let showSettingsDialog = $state(false);
   let shortcutSetting = $state("Ctrl+Space");
   let themeColorSetting = $state("zinc");
+  let fontSetting = $state("sans");
   let searchDirsSetting = $state("");
 
   async function loadSettings() {
     try {
-      let settings: { shortcut: string, theme_color: string, search_dirs: string[] } = await invoke("get_settings");
+      let settings: { shortcut: string, theme_color: string, font_family: string, search_dirs: string[] } = await invoke("get_settings");
       shortcutSetting = settings.shortcut;
       themeColorSetting = settings.theme_color;
+      fontSetting = settings.font_family;
       searchDirsSetting = settings.search_dirs.join("\n");
     } catch (e) {
       console.error("Failed to load settings:", e);
@@ -55,7 +56,7 @@
   async function saveSettings() {
     try {
       let dirs = searchDirsSetting.split("\n").map(d => d.trim()).filter(d => d.length > 0);
-      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, searchDirs: dirs });
+      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, fontFamily: fontSetting, searchDirs: dirs });
       showSettingsDialog = false;
       // Refocus input
       setTimeout(() => inputRef?.focus(), 100);
@@ -211,13 +212,7 @@
   onMount(() => {
     loadSettings();
 
-    const unlisten = listen("context_menu_open_selected", async () => {
-      // Execute the result that was right-clicked
-      if ((window as any).__CONTEXT_MENU_RESULT) {
-        executeResult((window as any).__CONTEXT_MENU_RESULT);
-        (window as any).__CONTEXT_MENU_RESULT = null;
-      }
-    });
+
     if (inputRef) {
       inputRef.focus();
     }
@@ -250,14 +245,15 @@
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
-      unlisten.then(f => f());
+
     };
   });
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
 
-<main class="container theme-{themeColorSetting}">
+
+<main class="container theme-{themeColorSetting} font-{fontSetting}">
   {#if viewingSnippet}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
       <div class="w-full max-w-2xl bg-zinc-900 p-6 shadow-xl border border-zinc-800">
@@ -300,6 +296,14 @@
               <option value="Ctrl+Space">Ctrl+Space</option>
               <option value="Alt+Space">Alt+Space</option>
               <option value="Super+Space">Super+Space</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-zinc-400 mb-1">フォント</label>
+            <select bind:value={fontSetting} class="w-full bg-zinc-950 px-3 py-2 text-sm text-zinc-200 focus-visible:outline-none focus-visible:ring-0 border-0">
+              <option value="sans">Sans-serif (標準)</option>
+              <option value="serif">Serif (明朝体)</option>
+              <option value="mono">Monospace (等幅)</option>
             </select>
           </div>
           <div>
@@ -413,18 +417,12 @@
     </div>
 
     {#if results.length > 0}
-      <Command.List class="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+      <Command.List class="flex-1 h-full overflow-y-auto px-2 py-2 space-y-1">
         {#each results as result, i}
           <Command.Item
             value={result.type === "snippet" ? `snippet-${result.title}` : (result.type === "window" ? `window-${result.id}` : `file-${(result as any).path}`)}
             onSelect={() => { executeResult(result); }}
-            oncontextmenu={(e) => {
-              e.preventDefault();
-              // Store the result globally or handle it properly.
-              // Since we just need to execute THIS result when menu is clicked:
-              (window as any).__CONTEXT_MENU_RESULT = result;
-              invoke("show_context_menu", { path: result.type === "file" ? result.path : result.title });
-            }}
+
           >
             <div class="flex items-center w-full px-2 py-2">
             {#if result.type === "window"}
@@ -452,8 +450,7 @@
   :global(body) {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: transparent;
+        background-color: transparent;
     overflow: hidden; /* Hide scrollbars */
   }
 

@@ -14,8 +14,8 @@
     "windows": [
       {
         "title": "Nitro",
-        "width": 800,
-        "height": 400,
+        "width": 900,
+        "height": 600,
         "decorations": false,
         "transparent": true,
         "visible": false,

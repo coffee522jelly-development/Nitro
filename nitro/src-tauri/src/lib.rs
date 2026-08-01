@@ -14,6 +14,7 @@ pub struct Snippet {
 pub struct AppSettings {
     pub shortcut: String,
     pub theme_color: String,
+    pub font_family: String,
     pub search_dirs: Vec<String>,
 }
 
@@ -30,6 +31,7 @@ impl Default for AppSettings {
         Self {
             shortcut: "Ctrl+Space".to_string(),
             theme_color: "zinc".to_string(),
+            font_family: "sans".to_string(),
             search_dirs: default_dirs,
         }
     }
@@ -148,14 +150,15 @@ fn get_settings() -> AppSettings {
 }
 
 #[tauri::command]
-fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, search_dirs: Option<Vec<String>>) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>) -> Result<(), String> {
     let path = get_settings_file_path().ok_or("Failed to get config path")?;
 
     let old_settings = get_settings();
 
     let dirs = search_dirs.unwrap_or(old_settings.search_dirs.clone());
 
-    let settings = AppSettings { shortcut: shortcut.clone(), theme_color, search_dirs: dirs };
+    let font = font_family.unwrap_or(old_settings.font_family.clone());
+    let settings = AppSettings { shortcut: shortcut.clone(), theme_color, font_family: font, search_dirs: dirs };
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
 
@@ -255,7 +258,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, show_context_menu, app_get_open_windows, focus_window, open_target])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, app_get_open_windows, focus_window, open_target])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -319,19 +322,5 @@ fn focus_window(id: u32, app_name: String) {
         let _ = Command::new("powershell")
             .args(&["-Command", &script])
             .spawn();
-    }
-}
-
-#[tauri::command]
-fn show_context_menu(app: tauri::AppHandle, _path: String) {
-    use tauri::menu::{Menu, MenuItem};
-    use tauri::Manager;
-
-    let _app_handle = app.clone();
-    let open_i = MenuItem::with_id(&app, "open_context_menu", "既定のアプリで開く", true, None::<&str>).unwrap();
-    let menu = Menu::with_items(&app, &[&open_i]).unwrap();
-
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.popup_menu(&menu);
     }
 }
