@@ -45,6 +45,7 @@ test('theme class is applied and item background is highlighted', async ({ page 
 
   // Focus the search input and search for the mock file
   const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
+  await page.getByText("ファイル検索").click();
   await searchInput.fill("test");
 
   // Wait for the result to appear

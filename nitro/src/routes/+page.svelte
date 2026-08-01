@@ -19,9 +19,12 @@
     | { type: "snippet"; title: string; content: string; tags?: string[] }
     | { type: "window"; id: number; title: string; app_name: string };
 
+
   let query = $state("");
   let results: SearchResult[] = $state([]);
   let inputRef = $state<HTMLInputElement | null>(null);
+  let searchMode = $state<"apps" | "files" | "snippets">("apps");
+
 
   // State for snippet creation
   let showSnippetDialog = $state(false);
@@ -70,35 +73,50 @@
     }
 
     try {
-      let snippets: Snippet[] = await invoke<Snippet[]>("get_snippets").catch(() => []);
-      let activeWindows: any[] = await invoke<any[]>("app_get_open_windows").catch(() => []);
+      const queryLower = query.toLowerCase().trim();
+      let newResults: SearchResult[] = [];
 
-      if (query.trim() === "") {
-        // If empty query, show windows then snippets
-        results = [
-          ...activeWindows.map(w => ({ type: "window" as const, id: w.id, title: w.title, app_name: w.app_name })),
-          ...snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }))
-        ];
-      } else {
-        let files: string[] = await invoke<string[]>("search_files", { query }).catch(() => []);
-
-        const queryLower = query.toLowerCase();
-        let matchedSnippets = snippets.filter(s => {
-          let matchTitle = s.title.toLowerCase().includes(queryLower);
-          let matchContent = s.content.toLowerCase().includes(queryLower);
-          let matchTags = s.tags ? s.tags.some(tag => tag.toLowerCase().includes(queryLower)) : false;
-          return matchTitle || matchContent || matchTags;
-        });
-
-        results = [
-          ...matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags })),
-          ...files.map(f => ({ type: "file" as const, path: f, name: f.split(/[/\\]/).pop() || f }))
-        ];
+      if (searchMode === "apps") {
+        let activeWindows: any[] = await invoke<any[]>("app_get_open_windows").catch(() => []);
+        let matchedWindows = activeWindows;
+        if (queryLower !== "") {
+          matchedWindows = activeWindows.filter(w =>
+            w.title.toLowerCase().includes(queryLower) ||
+            w.app_name.toLowerCase().includes(queryLower)
+          );
+        }
+        newResults = matchedWindows.map(w => ({ type: "window" as const, id: w.id, title: w.title, app_name: w.app_name }));
+      } else if (searchMode === "files") {
+        if (queryLower !== "") {
+          let files: string[] = await invoke<string[]>("search_files", { query: queryLower }).catch(() => []);
+          newResults = files.map(f => ({ type: "file" as const, path: f, name: f.split(/[\/\\]/).pop() || f }));
+        }
+      } else if (searchMode === "snippets") {
+        let snippets: Snippet[] = await invoke<Snippet[]>("get_snippets").catch(() => []);
+        let matchedSnippets = snippets;
+        if (queryLower !== "") {
+          matchedSnippets = snippets.filter(s => {
+            let matchTitle = s.title.toLowerCase().includes(queryLower);
+            let matchContent = s.content.toLowerCase().includes(queryLower);
+            let matchTags = s.tags ? s.tags.some(tag => tag.toLowerCase().includes(queryLower)) : false;
+            return matchTitle || matchContent || matchTags;
+          });
+        }
+        newResults = matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
       }
+
+      results = newResults;
     } catch (e) {
       console.error("Search failed:", e);
     }
   }
+
+  // Effect to trigger search when query or searchMode changes
+  $effect(() => {
+    // We reference searchMode to trigger reactivity
+    const _mode = searchMode;
+    search();
+  });
 
   function handleKeydown(event: KeyboardEvent) {
     if (showSnippetDialog || viewingSnippet || showSettingsDialog) return; // Let dialogs handle their own keys
@@ -113,6 +131,13 @@
       if (inputRef && document.activeElement !== inputRef) {
         inputRef.focus();
       }
+    } else if (event.key === "Tab") {
+      event.preventDefault();
+      const modes = ["apps", "files", "snippets"] as const;
+      const currentIndex = modes.indexOf(searchMode);
+      searchMode = event.shiftKey
+        ? modes[(currentIndex - 1 + modes.length) % modes.length]
+        : modes[(currentIndex + 1) % modes.length];
     }
   }
 
@@ -173,10 +198,7 @@
     }
   }
 
-  // Effect to trigger search when query changes
-  $effect(() => {
-    search();
-  });
+
 
   onMount(() => {
     loadSettings();
@@ -356,6 +378,30 @@
       >
         <SettingsIcon class="size-5" />
       </button>
+    </div>
+
+    <!-- Mode Selector -->
+    <div class="flex items-center px-4 py-2 border-b border-zinc-800/80 space-x-2 bg-zinc-900/50">
+      <button
+        class="px-3 py-1 text-sm font-medium rounded-full transition-colors {searchMode === 'apps' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}"
+        onclick={() => searchMode = 'apps'}
+      >
+        アプリ切替
+      </button>
+      <button
+        class="px-3 py-1 text-sm font-medium rounded-full transition-colors {searchMode === 'files' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}"
+        onclick={() => searchMode = 'files'}
+      >
+        ファイル検索
+      </button>
+      <button
+        class="px-3 py-1 text-sm font-medium rounded-full transition-colors {searchMode === 'snippets' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}"
+        onclick={() => searchMode = 'snippets'}
+      >
+        スニペット
+      </button>
+      <div class="flex-1"></div>
+      <span class="text-xs text-zinc-500">Tabキーで切替</span>
     </div>
 
     {#if results.length > 0}

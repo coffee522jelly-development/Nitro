@@ -97,6 +97,7 @@ test('can create and search for a code snippet', async ({ page }) => {
   await expect(page.getByText("新しいスニペット")).not.toBeVisible();
 
   // Now search for the newly created snippet (by tag)
+  await page.getByText("スニペット").click();
   await searchInput.fill("e2e");
 
   // We expect to see a search result item containing the text "Test Snippet Demo"
@@ -157,6 +158,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
 
   // Search using Japanese
   const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
+  await page.getByRole("button", { name: "スニペット", exact: true }).click();
   await searchInput.fill("日本語");
 
   // Result should be visible
