@@ -131,6 +131,14 @@
       if (inputRef && document.activeElement !== inputRef) {
         inputRef.focus();
       }
+    } else if (event.key === "Enter") {
+      // Force trigger the currently selected item in case shadcn-svelte's internal handling fails
+      const selectedEl = document.querySelector('[data-selected]');
+      if (selectedEl) {
+        // Prevent default form submission or other enter behaviors
+        event.preventDefault();
+        (selectedEl as HTMLElement).click();
+      }
     } else if (event.key === "Tab") {
       event.preventDefault();
       const modes = ["apps", "files", "snippets"] as const;

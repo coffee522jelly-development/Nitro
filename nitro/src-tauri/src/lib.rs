@@ -1,4 +1,3 @@
-use tauri::Emitter;
 use std::fs;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
@@ -198,11 +197,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            app.on_menu_event(move |app, event| {
-                if event.id() == "open_context_menu" {
-                    let _ = app.emit("context_menu_open_selected", ());
-                }
-            });
+
 
             let toggle_i = MenuItem::with_id(app, "toggle", "開く", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
