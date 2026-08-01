@@ -34,7 +34,7 @@ test('arrow keys and enter can open a file', async ({ page }) => {
           return null;
         }
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: ["/mock/path"] };
-        if (cmd === "plugin:opener|open" || cmd === "plugin:opener|open_path") {
+        if (cmd === "plugin:opener|open" || cmd === "plugin:opener|open_path" || cmd === "open_target") {
           // @ts-ignore
           window.__OPENER_CALLED = true;
           // @ts-ignore

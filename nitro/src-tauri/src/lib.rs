@@ -260,7 +260,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, show_context_menu, app_get_open_windows, focus_window])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, show_context_menu, app_get_open_windows, focus_window, open_target])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -288,6 +288,12 @@ fn app_get_open_windows() -> Vec<AppWindow> {
         }
     }
     results
+}
+
+#[tauri::command]
+fn open_target(path: String) -> Result<(), String> {
+
+    open::that(path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

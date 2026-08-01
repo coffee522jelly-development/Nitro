@@ -3,8 +3,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-  import { openPath } from "@tauri-apps/plugin-opener";
-  import { onMount } from "svelte";
+    import { onMount } from "svelte";
   import { Input } from "$lib/components/ui/input";
   import * as Command from "$lib/components/ui/command";
   import SettingsIcon from "lucide-svelte/icons/settings";
@@ -118,9 +117,10 @@
   }
 
   async function executeResult(result: SearchResult) {
+    console.log("Executing result:", result);
     try {
       if (result.type === "file") {
-        await openPath(result.path);
+        await invoke("open_target", { path: result.path });
       } else if (result.type === "window") {
         await invoke("focus_window", { id: result.id, appName: result.app_name });
         query = "";
