@@ -79,30 +79,30 @@
 
 
   /* Default Categories */
-  body.font-sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  body.font-serif { font-family: Georgia, Cambria, "Times New Roman", Times, serif; }
-  body.font-mono { font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  .font-sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .font-serif { font-family: Georgia, Cambria, "Times New Roman", Times, serif; }
+  .font-mono { font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
   /* Sans-serif Fonts */
-  body.font-inter { font-family: "Inter", sans-serif; }
-  body.font-roboto { font-family: "Roboto", sans-serif; }
-  body.font-open-sans { font-family: "Open Sans", sans-serif; }
-  body.font-lato { font-family: "Lato", sans-serif; }
-  body.font-montserrat { font-family: "Montserrat", sans-serif; }
-  body.font-noto-sans { font-family: "Noto Sans", "Noto Sans JP", sans-serif; }
-  body.font-ubuntu { font-family: "Ubuntu", sans-serif; }
+  .font-inter { font-family: "Inter", sans-serif; }
+  .font-roboto { font-family: "Roboto", sans-serif; }
+  .font-open-sans { font-family: "Open Sans", sans-serif; }
+  .font-lato { font-family: "Lato", sans-serif; }
+  .font-montserrat { font-family: "Montserrat", sans-serif; }
+  .font-noto-sans { font-family: "Noto Sans", "Noto Sans JP", sans-serif; }
+  .font-ubuntu { font-family: "Ubuntu", sans-serif; }
 
   /* Programmer / Monospace Fonts */
-  body.font-fira-code { font-family: "Fira Code", monospace; }
-  body.font-jetbrains-mono { font-family: "JetBrains Mono", monospace; }
-  body.font-hack { font-family: "Hack", monospace; }
-  body.font-cascadia-code { font-family: "Cascadia Code", monospace; }
-  body.font-source-code-pro { font-family: "Source Code Pro", monospace; }
-  body.font-roboto-mono { font-family: "Roboto Mono", monospace; }
-  body.font-ibm-plex-mono { font-family: "IBM Plex Mono", monospace; }
-  body.font-inconsolata { font-family: "Inconsolata", monospace; }
-  body.font-consolas { font-family: "Consolas", monospace; }
-  body.font-ubuntu-mono { font-family: "Ubuntu Mono", monospace; }
-  body.font-dank-mono { font-family: "Dank Mono", monospace; }
-  body.font-victor-mono { font-family: "Victor Mono", monospace; }
-  body.font-space-mono { font-family: "Space Mono", monospace; }
+  .font-fira-code { font-family: "Fira Code", monospace; }
+  .font-jetbrains-mono { font-family: "JetBrains Mono", monospace; }
+  .font-hack { font-family: "Hack", monospace; }
+  .font-cascadia-code { font-family: "Cascadia Code", monospace; }
+  .font-source-code-pro { font-family: "Source Code Pro", monospace; }
+  .font-roboto-mono { font-family: "Roboto Mono", monospace; }
+  .font-ibm-plex-mono { font-family: "IBM Plex Mono", monospace; }
+  .font-inconsolata { font-family: "Inconsolata", monospace; }
+  .font-consolas { font-family: "Consolas", monospace; }
+  .font-ubuntu-mono { font-family: "Ubuntu Mono", monospace; }
+  .font-dank-mono { font-family: "Dank Mono", monospace; }
+  .font-victor-mono { font-family: "Victor Mono", monospace; }
+  .font-space-mono { font-family: "Space Mono", monospace; }
