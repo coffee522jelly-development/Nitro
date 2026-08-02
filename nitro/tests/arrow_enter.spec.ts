@@ -52,7 +52,7 @@ test('arrow keys and enter can open a file', async ({ page }) => {
   await expect(searchInput).toBeVisible();
 
   // Type to trigger search
-  await page.getByText("ファイル検索").click();
+  await page.keyboard.press("Tab");
   await searchInput.fill("test");
 
   // Wait for results to appear

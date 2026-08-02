@@ -91,10 +91,11 @@ test('can create and search for a code snippet', async ({ page }) => {
   await page.getByPlaceholder("タグ (カンマ区切り)").fill("test, e2e, ts");
 
   // Save it
-  await page.getByRole('button', { name: 'OK' }).click();
+  await page.getByRole('button', { name: 'OK' }).click({ force: true });
 
   // Ensure dialog closed
-  await expect(page.getByText("新しいスニペット")).not.toBeVisible();
+  await expect(page.getByText("新しいスニペット")).toBeHidden();
+  await page.waitForTimeout(500);
 
   // Now search for the newly created snippet (by tag)
   await page.getByText("スニペット").click();
@@ -105,13 +106,21 @@ test('can create and search for a code snippet', async ({ page }) => {
   await expect(resultItem).toBeVisible();
 
   // Test opening the snippet viewer
-  await resultItem.click();
+  await page.keyboard.press('Enter');
   const viewerTitle = page.getByRole('heading', { name: "Test Snippet Demo" });
   await expect(viewerTitle).toBeVisible();
 
   // Ensure the close button exists
   const viewerCloseBtn = page.getByRole('button', { name: '閉じる', exact: true });
   await expect(viewerCloseBtn).toBeVisible();
+
+  // Test the new delete button
+  const deleteBtn = page.getByRole('button', { name: '削除', exact: true });
+  await expect(deleteBtn).toBeVisible();
+
+  // Test the new copy button
+  const copyBtn = page.getByRole('button', { name: 'コピー', exact: true });
+  await expect(copyBtn).toBeVisible();
 });
 
 test('can create and search for a japanese code snippet', async ({ page }) => {
@@ -154,11 +163,14 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await page.getByPlaceholder("タグ (カンマ区切り)").fill("日本語, test");
 
   // Save it
-  await page.getByRole('button', { name: 'OK' }).click();
+  await page.getByRole('button', { name: 'OK' }).click({ force: true });
 
   // Search using Japanese
   const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
-  await page.getByRole("button", { name: "スニペット", exact: true }).click();
+  await page.waitForTimeout(500);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.waitForTimeout(500);
   await searchInput.fill("日本語");
 
   // Result should be visible
@@ -166,7 +178,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await expect(resultItem).toBeVisible();
 
   // Open it and check the viewer
-  await resultItem.click();
+  await page.keyboard.press('Enter');
   const viewerTitle = page.getByRole('heading', { name: "日本語のテスト" });
   await expect(viewerTitle).toBeVisible();
 

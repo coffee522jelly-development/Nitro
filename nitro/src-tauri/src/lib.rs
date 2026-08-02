@@ -123,6 +123,20 @@ fn save_snippet(title: String, content: String, tags: Option<Vec<String>>) -> Re
     Ok(())
 }
 
+
+#[tauri::command]
+fn delete_snippet(title: String) -> Result<(), String> {
+    let path = get_snippets_file_path().ok_or("Failed to get config path")?;
+
+    let mut snippets = get_snippets();
+    snippets.retain(|s| s.title != title);
+
+    let json = serde_json::to_string_pretty(&snippets).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn get_settings_file_path() -> Option<PathBuf> {
     let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
     let path = PathBuf::from(home_dir).join(".nitro");
@@ -258,7 +272,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings, app_get_open_windows, focus_window, open_target])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, delete_snippet, get_settings, save_settings, app_get_open_windows, focus_window, open_target])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
