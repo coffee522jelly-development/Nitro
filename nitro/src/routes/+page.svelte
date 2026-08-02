@@ -54,7 +54,7 @@
 
   function renderInvisibles(text: string) {
     if (!text) return "";
-    return text.replace(/ /g, '·').replace(/　/g, '□').replace(/\t/g, '→   ');
+    return text.replace(/ /g, '·').replace(/　/g, '□').replace(/\t/g, '→\t');
   }
 
   async function loadSettings() {
@@ -213,7 +213,10 @@
     }
   }
 
+  let isExecuting = false;
   async function executeResult(result: SearchResult) {
+    if (isExecuting) return;
+    isExecuting = true;
     try {
       if (result.type === "app") {
         await invoke("focus_window", { id: result.id, appName: result.app_name });
@@ -228,6 +231,8 @@
       }
     } catch (e) {
       console.error("Execution failed:", e);
+    } finally {
+      setTimeout(() => { isExecuting = false; }, 300);
     }
   }
 
@@ -316,13 +321,14 @@
               <div
                 bind:this={viewingSnippetInvisibles}
                 class="absolute inset-0 pointer-events-none break-words whitespace-pre-wrap rounded-md border !border-transparent px-3 py-2 font-mono text-sm text-muted-foreground/30 overflow-hidden"
-                style="z-index: 1;"
+                style="z-index: 1; tab-size: 4; -moz-tab-size: 4;"
               >{renderInvisibles(viewingSnippet.content)}</div>
             {/if}
             <textarea
               bind:this={viewingSnippetTextarea}
               readonly
               class="relative z-10 flex min-h-[400px] w-full rounded-md border !border-[#333] {showInvisiblesSetting ? '!bg-transparent' : '!bg-black/50'} px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+              style="tab-size: 4; -moz-tab-size: 4;"
               onkeydown={(e) => { if (e.key === 'Escape') viewingSnippet = null;  }}
               onscroll={() => syncScroll(viewingSnippetTextarea, viewingSnippetInvisibles)}
             >{viewingSnippet.content}</textarea>
@@ -458,7 +464,7 @@
               <div
                 bind:this={newSnippetInvisibles}
                 class="absolute inset-0 pointer-events-none break-words whitespace-pre-wrap rounded-md border !border-transparent px-3 py-2 font-mono text-sm text-muted-foreground/30 overflow-hidden"
-                style="z-index: 1;"
+                style="z-index: 1; tab-size: 4; -moz-tab-size: 4;"
               >{renderInvisibles(newSnippetContent)}</div>
             {/if}
             <textarea
@@ -466,6 +472,7 @@
               bind:value={newSnippetContent}
               placeholder="スニペット内容"
               class="relative z-10 flex min-h-[400px] w-full rounded-md border border-input {showInvisiblesSetting ? 'bg-transparent' : 'bg-background'} px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+              style="tab-size: 4; -moz-tab-size: 4;"
               onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}
               onscroll={() => syncScroll(newSnippetTextarea, newSnippetInvisibles)}
             ></textarea>
@@ -523,7 +530,7 @@
           <Command.Item
             value={result.type === "snippet" ? `snippet-${result.title}` : result.type === "app" ? `app-${result.id}` : `file-${result.path}`}
             onSelect={() => { executeResult(result); }}
-            ondblclick={() => { executeResult(result); }}
+            ondblclick={(e) => { e.preventDefault(); executeResult(result); }}
           >
             {#if result.type === "snippet"}
               <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">📋</span>

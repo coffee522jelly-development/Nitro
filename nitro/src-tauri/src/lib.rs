@@ -10,14 +10,21 @@ pub struct Snippet {
     pub tags: Option<Vec<String>>,
 }
 
+fn default_theme_mode() -> String { "system".to_string() }
+fn default_show_invisibles() -> bool { false }
+fn default_search_debounce_ms() -> u32 { 500 }
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppSettings {
     pub shortcut: String,
     pub theme_color: String,
     pub font_family: String,
     pub search_dirs: Vec<String>,
+    #[serde(default = "default_theme_mode")]
     pub theme_mode: String,
+    #[serde(default = "default_show_invisibles")]
     pub show_invisibles: bool,
+    #[serde(default = "default_search_debounce_ms")]
     pub search_debounce_ms: u32,
 }
 
