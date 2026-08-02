@@ -13,12 +13,13 @@
   type SearchResult =
     | { type: "app"; id: number; app_name: string; title: string }
     | { type: "file"; path: string; name: string }
-    | { type: "snippet"; title: string; content: string; tags?: string[] };
+    | { type: "snippet"; title: string; content: string; tags?: string[] }
+    | { type: "web"; query: string };
 
   let query = $state("");
   let results: SearchResult[] = $state([]);
   let inputRef = $state<HTMLInputElement | null>(null);
-  let searchMode = $state<"apps" | "files" | "snippets">("apps");
+  let searchMode = $state<"apps" | "files" | "snippets" | "web">("apps");
 
   // State for snippet creation
   let showSnippetDialog = $state(false);
@@ -138,6 +139,12 @@
           });
           results = matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
         }
+      } else if (currentMode === "web") {
+        if (currentQuery.trim() !== "") {
+          results = [{ type: "web", query: currentQuery }];
+        } else {
+          results = [];
+        }
       }
     } catch (e) {
       console.error("Search failed:", e);
@@ -178,6 +185,7 @@
       event.preventDefault();
       if (searchMode === "apps") searchMode = "files";
       else if (searchMode === "files") searchMode = "snippets";
+      else if (searchMode === "snippets") searchMode = "web";
       else searchMode = "apps";
       inputRef?.focus();
     } else if (event.key === "Enter") {
@@ -228,6 +236,10 @@
           content: result.content,
           tags: result.tags
         };
+      } else if (result.type === "web") {
+        const url = `https://www.google.com/search?q=${encodeURIComponent(result.query)}`;
+        await invoke("open_target", { path: url });
+        getCurrentWindow().hide();
       }
     } catch (e) {
       console.error("Execution failed:", e);
@@ -496,12 +508,13 @@
         <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'apps' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "apps"; inputRef?.focus(); }}>Apps</button>
         <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'files' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "files"; inputRef?.focus(); }}>Files</button>
         <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'snippets' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "snippets"; inputRef?.focus(); }}>Snippets</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'web' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "web"; inputRef?.focus(); }}>Web</button>
       </div>
       <div class="flex-1">
         <Command.Input
           bind:ref={inputRef}
           bind:value={query}
-          placeholder={searchMode === 'apps' ? "アプリを検索..." : searchMode === 'files' ? "ファイルを検索..." : "スニペットを検索..."}
+          placeholder={searchMode === 'apps' ? "アプリを検索..." : searchMode === 'files' ? "ファイルを検索..." : searchMode === 'web' ? "Webで検索..." : "スニペットを検索..."}
           autofocus
           class="text-xl border-0 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-14 px-2 bg-transparent"
         />
@@ -528,7 +541,7 @@
       <Command.List class="flex-1 h-full overflow-y-auto">
         {#each results as result, i}
           <Command.Item
-            value={result.type === "snippet" ? `snippet-${result.title}` : result.type === "app" ? `app-${result.id}` : `file-${result.path}`}
+            value={result.type === "snippet" ? `snippet-${result.title}` : result.type === "app" ? `app-${result.id}` : result.type === "web" ? `web-${result.query}` : `file-${result.path}`}
             onSelect={() => { executeResult(result); }}
             ondblclick={(e) => { e.preventDefault(); executeResult(result); }}
           >
@@ -540,6 +553,9 @@
               <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">🪟</span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.title}</span>
               <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70">{result.app_name}</span>
+            {:else if result.type === "web"}
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">🌐</span>
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">"{result.query}" をWebで検索</span>
             {:else}
               <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">📄</span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.name}</span>
