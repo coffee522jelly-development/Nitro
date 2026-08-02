@@ -37,6 +37,7 @@
   let searchDirsSetting = $state("");
   let themeModeSetting = $state("system");
   let showInvisiblesSetting = $state(false);
+  let searchDebounceSetting = $state(500);
 
   // Sync scroll for snippet invisibles
   let newSnippetTextarea: HTMLTextAreaElement | null = $state(null);
@@ -58,13 +59,14 @@
 
   async function loadSettings() {
     try {
-      let settings: { shortcut: string, theme_color: string, font_family: string, search_dirs: string[], theme_mode: string, show_invisibles: boolean } = await invoke("get_settings");
+      let settings: { shortcut: string, theme_color: string, font_family: string, search_dirs: string[], theme_mode: string, show_invisibles: boolean, search_debounce_ms: number } = await invoke("get_settings");
       shortcutSetting = settings.shortcut;
       themeColorSetting = settings.theme_color;
       fontSetting = settings.font_family;
       searchDirsSetting = settings.search_dirs.join("\n");
       themeModeSetting = settings.theme_mode;
       showInvisiblesSetting = settings.show_invisibles;
+      searchDebounceSetting = settings.search_debounce_ms;
       applyThemeMode();
     } catch (e) {
       console.error("Failed to load settings:", e);
@@ -95,7 +97,7 @@
   async function saveSettings() {
     try {
       let dirs = searchDirsSetting.split("\n").map(d => d.trim()).filter(d => d.length > 0);
-      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, fontFamily: fontSetting, searchDirs: dirs, themeMode: themeModeSetting, showInvisibles: showInvisiblesSetting });
+      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, fontFamily: fontSetting, searchDirs: dirs, themeMode: themeModeSetting, showInvisibles: showInvisiblesSetting, searchDebounceMs: searchDebounceSetting });
       showSettingsDialog = false;
       // Refocus input
       setTimeout(() => inputRef?.focus(), 100);
@@ -104,37 +106,30 @@
     }
   }
 
-  async function search() {
-    // Command to open snippet creation dialog (legacy fallback)
-    if (query.startsWith("> snippet")) {
-      showSnippetDialog = true;
-      query = "";
-      return;
-    }
-
+  async function performSearch(currentQuery: string, currentMode: string) {
     try {
-      if (searchMode === "apps") {
+      if (currentMode === "apps") {
         let openWindows: { id: number, app_name: string, title: string }[] = await invoke("app_get_open_windows").catch(() => []);
-        if (query.trim() !== "") {
-          const queryLower = query.toLowerCase();
+        if (currentQuery.trim() !== "") {
+          const queryLower = currentQuery.toLowerCase();
           openWindows = openWindows.filter(w =>
             w.app_name.toLowerCase().includes(queryLower) || w.title.toLowerCase().includes(queryLower)
           );
         }
         results = openWindows.map(w => ({ type: "app" as const, id: w.id, app_name: w.app_name, title: w.title }));
-      } else if (searchMode === "files") {
-        if (query.trim() === "") {
+      } else if (currentMode === "files") {
+        if (currentQuery.trim() === "") {
           results = [];
         } else {
-          let files: string[] = await invoke<string[]>("search_files", { query }).catch(() => []);
+          let files: string[] = await invoke<string[]>("search_files", { query: currentQuery }).catch(() => []);
           results = files.map(f => ({ type: "file" as const, path: f, name: f.split(/[/\\]/).pop() || f }));
         }
-      } else if (searchMode === "snippets") {
+      } else if (currentMode === "snippets") {
         let snippets: Snippet[] = await invoke<Snippet[]>("get_snippets").catch(() => []);
-        if (query.trim() === "") {
+        if (currentQuery.trim() === "") {
           results = snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
         } else {
-          const queryLower = query.toLowerCase();
+          const queryLower = currentQuery.toLowerCase();
           let matchedSnippets = snippets.filter(s => {
             let matchTitle = s.title.toLowerCase().includes(queryLower);
             let matchContent = s.content.toLowerCase().includes(queryLower);
@@ -148,6 +143,23 @@
       console.error("Search failed:", e);
     }
   }
+
+  async function search() {
+    // Command to open snippet creation dialog (legacy fallback)
+    if (query.startsWith("> snippet")) {
+      showSnippetDialog = true;
+      query = "";
+      return;
+    }
+
+    // Immediate updates for modes that don't need heavy backend searching
+    // or if the query is empty
+    if (searchMode !== "files" || query.trim() === "") {
+      performSearch(query, searchMode);
+    }
+  }
+
+  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   function handleKeydown(event: KeyboardEvent) {
     if (showSnippetDialog || viewingSnippet || showSettingsDialog) return; // Let dialogs handle their own keys
@@ -264,7 +276,16 @@
 
   // Effect to trigger search when query changes
   $effect(() => {
-    search();
+    if (searchMode === "files" && query.trim() !== "") {
+      if (searchTimeout) clearTimeout(searchTimeout);
+      const currentQuery = query;
+      const currentMode = searchMode;
+      searchTimeout = setTimeout(() => {
+        performSearch(currentQuery, currentMode);
+      }, searchDebounceSetting);
+    } else {
+      search();
+    }
   });
 
   onMount(() => {
@@ -404,6 +425,11 @@
               <input type="checkbox" bind:checked={showInvisiblesSetting} class="mr-2" />
               空白・タブ文字を可視化する
             </label>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-muted-foreground mb-1">ファイル検索遅延 (ミリ秒)</label>
+            <input type="number" bind:value={searchDebounceSetting} min="0" step="100" class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0" />
+            <p class="text-xs text-muted-foreground mt-1">入力ごとに検索がかかるのを防ぎ、動作を軽くします。</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">検索対象ディレクトリ (1行に1つ)</label>

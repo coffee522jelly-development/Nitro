@@ -18,6 +18,7 @@ pub struct AppSettings {
     pub search_dirs: Vec<String>,
     pub theme_mode: String,
     pub show_invisibles: bool,
+    pub search_debounce_ms: u32,
 }
 
 impl Default for AppSettings {
@@ -37,6 +38,7 @@ impl Default for AppSettings {
             search_dirs: default_dirs,
             theme_mode: "system".to_string(),
             show_invisibles: false,
+            search_debounce_ms: 500,
         }
     }
 }
@@ -168,7 +170,7 @@ fn get_settings() -> AppSettings {
 }
 
 #[tauri::command]
-fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>, theme_mode: Option<String>, show_invisibles: Option<bool>) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>, theme_mode: Option<String>, show_invisibles: Option<bool>, search_debounce_ms: Option<u32>) -> Result<(), String> {
     let path = get_settings_file_path().ok_or("Failed to get config path")?;
 
     let old_settings = get_settings();
@@ -178,6 +180,7 @@ fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, f
     let font = font_family.unwrap_or(old_settings.font_family.clone());
     let t_mode = theme_mode.unwrap_or(old_settings.theme_mode.clone());
     let s_invisibles = show_invisibles.unwrap_or(old_settings.show_invisibles);
+    let s_debounce = search_debounce_ms.unwrap_or(old_settings.search_debounce_ms);
 
     let settings = AppSettings {
         shortcut: shortcut.clone(),
@@ -186,6 +189,7 @@ fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, f
         search_dirs: dirs,
         theme_mode: t_mode,
         show_invisibles: s_invisibles,
+        search_debounce_ms: s_debounce,
     };
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
@@ -345,9 +349,12 @@ fn focus_window(id: u32, app_name: String) {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
         let safe_name = app_name.replace("'", "''");
         let script = format!("(New-Object -ComObject WScript.Shell).AppActivate('{}')", safe_name);
         let _ = Command::new("powershell")
+            .creation_flags(CREATE_NO_WINDOW)
             .args(&["-Command", &script])
             .spawn();
     }

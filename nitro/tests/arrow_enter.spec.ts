@@ -33,7 +33,7 @@ test('arrow keys and enter can open a file', async ({ page }) => {
           }
           return null;
         }
-        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", font_family: "sans", search_dirs: ["/mock/path"], theme_mode: "system", show_invisibles: false };
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", font_family: "sans", search_dirs: ["/mock/path"], theme_mode: "system", show_invisibles: false, search_debounce_ms: 0 };
         if (cmd === "plugin:opener|open" || cmd === "plugin:opener|open_path" || cmd === "open_target") {
           // @ts-ignore
           window.__OPENER_CALLED = true;
