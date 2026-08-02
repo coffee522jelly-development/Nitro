@@ -1,6 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 test('search palette handles empty and populated queries', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: any) => {
+        if (cmd === "search_files") return [];
+        if (cmd === "focus_window") return Promise.resolve();
+        if (cmd === "app_get_open_windows") return Promise.resolve([]);
+        if (cmd === "get_snippets") return [];
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
+        return null;
+      }
+    };
+  });
+
   // Go to the Tauri app locally
   await page.goto('/');
 
@@ -33,19 +48,31 @@ test('can create and search for a code snippet', async ({ page }) => {
     const snippets: {title: string, content: string, tags: string[]}[] = [];
 
     // @ts-ignore
-    window.__TAURI_INTERNALS__ = {
+    (window as any).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: any) => {
         if (cmd === "search_files") {
           return [];
         }
+                        if (cmd === "focus_window") {
+          return Promise.resolve();
+        }
+        if (cmd === "app_get_open_windows") {
+          return Promise.resolve([]);
+        }
         if (cmd === "get_snippets") {
           return snippets;
         }
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
         if (cmd === "save_snippet") {
           snippets.push({ title: args.title, content: args.content, tags: args.tags });
           return;
         }
-        throw new Error(`Unhandled mock command: ${cmd}`);
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
+        return null;
       }
     };
   });
@@ -64,12 +91,14 @@ test('can create and search for a code snippet', async ({ page }) => {
   await page.getByPlaceholder("タグ (カンマ区切り)").fill("test, e2e, ts");
 
   // Save it
-  await page.getByRole('button', { name: '保存' }).click();
+  await page.getByRole('button', { name: 'OK' }).click({ force: true });
 
   // Ensure dialog closed
-  await expect(page.getByText("新しいスニペット")).not.toBeVisible();
+  await expect(page.getByText("新しいスニペット")).toBeHidden();
+  await page.waitForTimeout(500);
 
   // Now search for the newly created snippet (by tag)
+  await page.getByText("スニペット").click();
   await searchInput.fill("e2e");
 
   // We expect to see a search result item containing the text "Test Snippet Demo"
@@ -77,28 +106,48 @@ test('can create and search for a code snippet', async ({ page }) => {
   await expect(resultItem).toBeVisible();
 
   // Test opening the snippet viewer
-  await resultItem.click();
+  await page.keyboard.press('Enter');
   const viewerTitle = page.getByRole('heading', { name: "Test Snippet Demo" });
   await expect(viewerTitle).toBeVisible();
 
   // Ensure the close button exists
   const viewerCloseBtn = page.getByRole('button', { name: '閉じる', exact: true });
   await expect(viewerCloseBtn).toBeVisible();
+
+  // Test the new delete button
+  const deleteBtn = page.getByRole('button', { name: '削除', exact: true });
+  await expect(deleteBtn).toBeVisible();
+
+  // Test the new copy button
+  const copyBtn = page.getByRole('button', { name: 'コピー', exact: true });
+  await expect(copyBtn).toBeVisible();
 });
 
 test('can create and search for a japanese code snippet', async ({ page }) => {
   await page.addInitScript(() => {
     const snippets: {title: string, content: string, tags: string[]}[] = [];
     // @ts-ignore
-    window.__TAURI_INTERNALS__ = {
+    (window as any).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: any) => {
         if (cmd === "search_files") return [];
+                        if (cmd === "focus_window") {
+          return Promise.resolve();
+        }
+        if (cmd === "app_get_open_windows") {
+          return Promise.resolve([]);
+        }
         if (cmd === "get_snippets") return snippets;
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
         if (cmd === "save_snippet") {
           snippets.push({ title: args.title, content: args.content, tags: args.tags });
           return;
         }
-        throw new Error(`Unhandled mock command: ${cmd}`);
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
+        if (cmd === "plugin:event|listen") return Promise.resolve(1234);
+        if (cmd === "plugin:event|unlisten") return Promise.resolve();
+        return null;
       }
     };
   });
@@ -114,10 +163,14 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await page.getByPlaceholder("タグ (カンマ区切り)").fill("日本語, test");
 
   // Save it
-  await page.getByRole('button', { name: '保存' }).click();
+  await page.getByRole('button', { name: 'OK' }).click({ force: true });
 
   // Search using Japanese
   const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
+  await page.waitForTimeout(500);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.waitForTimeout(500);
   await searchInput.fill("日本語");
 
   // Result should be visible
@@ -125,7 +178,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await expect(resultItem).toBeVisible();
 
   // Open it and check the viewer
-  await resultItem.click();
+  await page.keyboard.press('Enter');
   const viewerTitle = page.getByRole('heading', { name: "日本語のテスト" });
   await expect(viewerTitle).toBeVisible();
 

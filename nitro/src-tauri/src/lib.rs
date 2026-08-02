@@ -14,6 +14,7 @@ pub struct Snippet {
 pub struct AppSettings {
     pub shortcut: String,
     pub theme_color: String,
+    pub font_family: String,
     pub search_dirs: Vec<String>,
 }
 
@@ -30,6 +31,7 @@ impl Default for AppSettings {
         Self {
             shortcut: "Ctrl+Space".to_string(),
             theme_color: "zinc".to_string(),
+            font_family: "sans".to_string(),
             search_dirs: default_dirs,
         }
     }
@@ -52,7 +54,7 @@ fn search_files(query: String) -> Vec<String> {
 
     let settings = get_settings();
     let mut count = 0;
-    let max_results = 50;
+    let max_results = 500;
 
     for dir_str in settings.search_dirs {
         let target_dir = PathBuf::from(&dir_str);
@@ -60,8 +62,8 @@ fn search_files(query: String) -> Vec<String> {
             continue;
         }
 
-        // Limit depth to avoid taking too long, e.g. depth 3
-        for entry in WalkDir::new(target_dir).max_depth(3).into_iter().filter_map(|e| e.ok()) {
+        // For massive folders, we should only return a slice. To not freeze we cap max_results tightly.
+        for entry in WalkDir::new(target_dir).into_iter().filter_map(|e| e.ok()) {
             if count >= max_results {
                 break;
             }
@@ -121,6 +123,20 @@ fn save_snippet(title: String, content: String, tags: Option<Vec<String>>) -> Re
     Ok(())
 }
 
+
+#[tauri::command]
+fn delete_snippet(title: String) -> Result<(), String> {
+    let path = get_snippets_file_path().ok_or("Failed to get config path")?;
+
+    let mut snippets = get_snippets();
+    snippets.retain(|s| s.title != title);
+
+    let json = serde_json::to_string_pretty(&snippets).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn get_settings_file_path() -> Option<PathBuf> {
     let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
     let path = PathBuf::from(home_dir).join(".nitro");
@@ -148,14 +164,15 @@ fn get_settings() -> AppSettings {
 }
 
 #[tauri::command]
-fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, search_dirs: Option<Vec<String>>) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>) -> Result<(), String> {
     let path = get_settings_file_path().ok_or("Failed to get config path")?;
 
     let old_settings = get_settings();
 
     let dirs = search_dirs.unwrap_or(old_settings.search_dirs.clone());
 
-    let settings = AppSettings { shortcut: shortcut.clone(), theme_color, search_dirs: dirs };
+    let font = font_family.unwrap_or(old_settings.font_family.clone());
+    let settings = AppSettings { shortcut: shortcut.clone(), theme_color, font_family: font, search_dirs: dirs };
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
 
@@ -196,6 +213,8 @@ pub fn run() {
             // Keep the application running in the background even if the window is closed
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+
 
             let toggle_i = MenuItem::with_id(app, "toggle", "開く", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
@@ -253,7 +272,69 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, get_settings, save_settings])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, delete_snippet, get_settings, save_settings, app_get_open_windows, focus_window, open_target])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+
+#[derive(serde::Serialize, Clone)]
+pub struct AppWindow {
+    pub id: u32,
+    pub title: String,
+    pub app_name: String,
+}
+
+#[tauri::command]
+fn app_get_open_windows() -> Vec<AppWindow> {
+    use x_win::get_open_windows;
+
+    let mut results = Vec::new();
+    if let Ok(windows) = get_open_windows() {
+        for window in windows {
+            results.push(AppWindow {
+                id: window.id,
+                title: window.title.clone(),
+                app_name: window.info.name.clone(),
+            });
+        }
+    }
+    results
+}
+
+#[tauri::command]
+fn open_target(path: String) -> Result<(), String> {
+
+    open::that(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[allow(unused_variables)]
+fn focus_window(id: u32, app_name: String) {
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+        let id_hex = format!("0x{:x}", id);
+        let _ = Command::new("wmctrl")
+            .args(&["-i", "-a", &id_hex])
+            .spawn();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        let safe_name = app_name.replace('"', "");
+        let script = format!("tell application \"{}\" to activate", safe_name);
+        let _ = Command::new("osascript")
+            .args(&["-e", &script])
+            .spawn();
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        let safe_name = app_name.replace("'", "''");
+        let script = format!("(New-Object -ComObject WScript.Shell).AppActivate('{}')", safe_name);
+        let _ = Command::new("powershell")
+            .args(&["-Command", &script])
+            .spawn();
+    }
 }

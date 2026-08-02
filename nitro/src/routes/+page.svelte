@@ -6,6 +6,8 @@
   import { Input } from "$lib/components/ui/input";
   import * as Command from "$lib/components/ui/command";
   import SettingsIcon from "lucide-svelte/icons/settings";
+  import CopyIcon from "lucide-svelte/icons/copy";
+  import Trash2Icon from "lucide-svelte/icons/trash-2";
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
@@ -29,13 +31,15 @@
   let showSettingsDialog = $state(false);
   let shortcutSetting = $state("Ctrl+Space");
   let themeColorSetting = $state("zinc");
+  let fontSetting = $state("sans");
   let searchDirsSetting = $state("");
 
   async function loadSettings() {
     try {
-      let settings: { shortcut: string, theme_color: string, search_dirs: string[] } = await invoke("get_settings");
+      let settings: { shortcut: string, theme_color: string, font_family: string, search_dirs: string[] } = await invoke("get_settings");
       shortcutSetting = settings.shortcut;
       themeColorSetting = settings.theme_color;
+      fontSetting = settings.font_family;
       searchDirsSetting = settings.search_dirs.join("\n");
     } catch (e) {
       console.error("Failed to load settings:", e);
@@ -45,7 +49,7 @@
   async function saveSettings() {
     try {
       let dirs = searchDirsSetting.split("\n").map(d => d.trim()).filter(d => d.length > 0);
-      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, searchDirs: dirs });
+      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, fontFamily: fontSetting, searchDirs: dirs });
       showSettingsDialog = false;
       // Refocus input
       setTimeout(() => inputRef?.focus(), 100);
@@ -121,16 +125,24 @@
     }
   }
 
-  async function copyAndCloseSnippet() {
+  async function copySnippet() {
     if (viewingSnippet) {
       try {
         await writeText(viewingSnippet.content);
-        viewingSnippet = null;
-        query = "";
-        results = [];
-        await getCurrentWindow().hide();
       } catch (e) {
         console.error("Copy failed:", e);
+      }
+    }
+  }
+
+  async function handleDeleteSnippet() {
+    if (viewingSnippet) {
+      try {
+        await invoke("delete_snippet", { title: viewingSnippet.title });
+        viewingSnippet = null;
+        search(); // refresh results
+      } catch (e) {
+        console.error("Delete failed:", e);
       }
     }
   }
@@ -178,7 +190,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<main class="container theme-{themeColorSetting}">
+<main class="container theme-{themeColorSetting} font-{fontSetting}">
   {#if viewingSnippet}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div class="w-full max-w-2xl rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
@@ -188,7 +200,7 @@
             <textarea
               readonly
               class="flex min-h-[250px] w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
-              onkeydown={(e) => { if (e.key === 'Escape') viewingSnippet = null; else if (e.key === 'Enter') copyAndCloseSnippet(); }}
+              onkeydown={(e) => { if (e.key === 'Escape') viewingSnippet = null;  }}
             >{viewingSnippet.content}</textarea>
           </div>
           {#if viewingSnippet.tags && viewingSnippet.tags.length > 0}
@@ -200,10 +212,22 @@
               {/each}
             </div>
           {/if}
-          <div class="flex justify-end space-x-2 pt-2">
-            <!-- svelte-ignore a11y_autofocus -->
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" autofocus onclick={() => viewingSnippet = null}>閉じる</button>
-            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={copyAndCloseSnippet}>コピーして閉じる</button>
+          <div class="flex justify-between items-center pt-2">
+            <button
+              class="flex items-center space-x-1 rounded-md px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+              onclick={handleDeleteSnippet}
+              title="削除"
+            >
+              <Trash2Icon class="size-4" />
+              <span>削除</span>
+            </button>
+            <div class="flex space-x-2">
+              <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => viewingSnippet = null}>閉じる</button>
+              <button class="flex items-center space-x-1 rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={copySnippet}>
+                <CopyIcon class="size-4" />
+                <span>コピー</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -243,8 +267,8 @@
             <textarea bind:value={searchDirsSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 min-h-[100px]"></textarea>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSettingsDialog = false}>キャンセル</button>
-            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={saveSettings}>保存</button>
+            <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => showSettingsDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={saveSettings}>保存</button>
           </div>
         </div>
       </div>
@@ -273,8 +297,8 @@
             <p class="mt-2 text-xs text-muted-foreground">保存するには Ctrl+Enter を押してください</p>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-popover-foreground" onclick={() => showSnippetDialog = false}>キャンセル</button>
-            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90" onclick={handleSaveSnippet}>保存</button>
+            <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => showSnippetDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={handleSaveSnippet}>OK</button>
           </div>
         </div>
       </div>
