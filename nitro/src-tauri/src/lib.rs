@@ -10,12 +10,22 @@ pub struct Snippet {
     pub tags: Option<Vec<String>>,
 }
 
+fn default_theme_mode() -> String { "system".to_string() }
+fn default_show_invisibles() -> bool { false }
+fn default_search_debounce_ms() -> u32 { 500 }
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppSettings {
     pub shortcut: String,
     pub theme_color: String,
     pub font_family: String,
     pub search_dirs: Vec<String>,
+    #[serde(default = "default_theme_mode")]
+    pub theme_mode: String,
+    #[serde(default = "default_show_invisibles")]
+    pub show_invisibles: bool,
+    #[serde(default = "default_search_debounce_ms")]
+    pub search_debounce_ms: u32,
 }
 
 impl Default for AppSettings {
@@ -33,6 +43,9 @@ impl Default for AppSettings {
             theme_color: "zinc".to_string(),
             font_family: "sans".to_string(),
             search_dirs: default_dirs,
+            theme_mode: "system".to_string(),
+            show_invisibles: false,
+            search_debounce_ms: 500,
         }
     }
 }
@@ -111,7 +124,7 @@ fn get_snippets() -> Vec<Snippet> {
 }
 
 #[tauri::command]
-fn save_snippet(title: String, content: String, tags: Option<Vec<String>>) -> Result<(), String> {
+fn save_snippet(app: tauri::AppHandle, title: String, content: String, tags: Option<Vec<String>>) -> Result<(), String> {
     let path = get_snippets_file_path().ok_or("Failed to get config path")?;
 
     let mut snippets = get_snippets();
@@ -120,12 +133,14 @@ fn save_snippet(title: String, content: String, tags: Option<Vec<String>>) -> Re
     let json = serde_json::to_string_pretty(&snippets).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
 
+    let _ = build_tray_menu(&app);
+
     Ok(())
 }
 
 
 #[tauri::command]
-fn delete_snippet(title: String) -> Result<(), String> {
+fn delete_snippet(app: tauri::AppHandle, title: String) -> Result<(), String> {
     let path = get_snippets_file_path().ok_or("Failed to get config path")?;
 
     let mut snippets = get_snippets();
@@ -133,6 +148,8 @@ fn delete_snippet(title: String) -> Result<(), String> {
 
     let json = serde_json::to_string_pretty(&snippets).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
+
+    let _ = build_tray_menu(&app);
 
     Ok(())
 }
@@ -164,7 +181,7 @@ fn get_settings() -> AppSettings {
 }
 
 #[tauri::command]
-fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>, theme_mode: Option<String>, show_invisibles: Option<bool>, search_debounce_ms: Option<u32>) -> Result<(), String> {
     let path = get_settings_file_path().ok_or("Failed to get config path")?;
 
     let old_settings = get_settings();
@@ -172,7 +189,19 @@ fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, f
     let dirs = search_dirs.unwrap_or(old_settings.search_dirs.clone());
 
     let font = font_family.unwrap_or(old_settings.font_family.clone());
-    let settings = AppSettings { shortcut: shortcut.clone(), theme_color, font_family: font, search_dirs: dirs };
+    let t_mode = theme_mode.unwrap_or(old_settings.theme_mode.clone());
+    let s_invisibles = show_invisibles.unwrap_or(old_settings.show_invisibles);
+    let s_debounce = search_debounce_ms.unwrap_or(old_settings.search_debounce_ms);
+
+    let settings = AppSettings {
+        shortcut: shortcut.clone(),
+        theme_color,
+        font_family: font,
+        search_dirs: dirs,
+        theme_mode: t_mode,
+        show_invisibles: s_invisibles,
+        search_debounce_ms: s_debounce,
+    };
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
 
@@ -189,8 +218,80 @@ fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, f
     Ok(())
 }
 
-use tauri::{menu::{Menu, MenuItem}, tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}, Manager};
+use tauri::{menu::{Menu, MenuItem, Submenu}, tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri_plugin_clipboard_manager::ClipboardExt;
+
+fn build_tray_menu(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let toggle_i = MenuItem::with_id(app, "toggle", "開く", true, None::<&str>)?;
+    let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
+
+    let menu = Menu::new(app)?;
+    let _ = menu.append(&toggle_i);
+
+    let snippets = get_snippets();
+    if !snippets.is_empty() {
+        let snippets_submenu = Submenu::new(app, "スニペットをコピー", true)?;
+        for (i, snippet) in snippets.iter().enumerate() {
+            let item = MenuItem::with_id(app, format!("snippet_{}", i), snippet.title.clone(), true, None::<&str>)?;
+            let _ = snippets_submenu.append(&item);
+        }
+        let _ = menu.append(&snippets_submenu);
+    }
+
+    let _ = menu.append(&quit_i);
+
+    if let Some(tray) = app.tray_by_id("main_tray") {
+        let _ = tray.set_menu(Some(menu));
+    } else {
+        let _tray = TrayIconBuilder::with_id("main_tray")
+            .icon(app.default_window_icon().unwrap().clone())
+            .menu(&menu)
+            .show_menu_on_left_click(false)
+            .on_menu_event(|app, event| {
+                let id = event.id.as_ref();
+                if id == "toggle" {
+                    if let Some(window) = app.get_webview_window("main") {
+                        if window.is_visible().unwrap_or(false) {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                } else if id == "quit" {
+                    app.exit(0);
+                } else if id.starts_with("snippet_") {
+                    if let Ok(idx) = id.replace("snippet_", "").parse::<usize>() {
+                        let snippets = get_snippets();
+                        if let Some(snippet) = snippets.get(idx) {
+                            let _ = app.clipboard().write_text(&snippet.content);
+                        }
+                    }
+                }
+            })
+            .on_tray_icon_event(|tray, event| {
+                if let TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } = event
+                {
+                    if let Some(window) = tray.app_handle().get_webview_window("main") {
+                        if window.is_visible().unwrap_or(false) {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                }
+            })
+            .build(app)?;
+    }
+
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -214,51 +315,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-
-
-            let toggle_i = MenuItem::with_id(app, "toggle", "開く", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&toggle_i, &quit_i])?;
-
-            // Add a simple system tray icon
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "toggle" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                    }
-                    "quit" => {
-                        app.exit(0);
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        if let Some(window) = tray.app_handle().get_webview_window("main") {
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                    }
-                })
-                .build(app)?;
+            let _ = build_tray_menu(app.handle());
 
             // Register configured shortcut
             let settings = get_settings();
@@ -331,9 +388,12 @@ fn focus_window(id: u32, app_name: String) {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
         let safe_name = app_name.replace("'", "''");
         let script = format!("(New-Object -ComObject WScript.Shell).AppActivate('{}')", safe_name);
         let _ = Command::new("powershell")
+            .creation_flags(CREATE_NO_WINDOW)
             .args(&["-Command", &script])
             .spawn();
     }

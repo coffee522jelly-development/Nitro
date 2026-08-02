@@ -44,9 +44,9 @@ test('theme class is applied and item background is highlighted', async ({ page 
   await expect(mainContainer).toHaveClass(/theme-red/);
 
   // Focus the search input and search for the mock file
-  const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
+  const searchInput = page.getByPlaceholder("アプリを検索...");
   await page.keyboard.press("Tab");
-  await searchInput.fill("test");
+  await page.getByPlaceholder("ファイルを検索...").fill("test");
 
   // Wait for the result to appear
   const result = page.getByText("test_folder", { exact: true });

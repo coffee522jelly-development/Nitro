@@ -33,7 +33,7 @@ test('arrow keys and enter can open a file', async ({ page }) => {
           }
           return null;
         }
-        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: ["/mock/path"] };
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", font_family: "sans", search_dirs: ["/mock/path"], theme_mode: "system", show_invisibles: false, search_debounce_ms: 0 };
         if (cmd === "plugin:opener|open" || cmd === "plugin:opener|open_path" || cmd === "open_target") {
           // @ts-ignore
           window.__OPENER_CALLED = true;
@@ -48,12 +48,12 @@ test('arrow keys and enter can open a file', async ({ page }) => {
 
   await page.goto('/');
 
-  const searchInput = page.getByPlaceholder("ファイルやスニペットを検索...");
+  const searchInput = page.getByPlaceholder("アプリを検索...");
   await expect(searchInput).toBeVisible();
 
   // Type to trigger search
   await page.keyboard.press("Tab");
-  await searchInput.fill("test");
+  await page.getByPlaceholder("ファイルを検索...").fill("test");
 
   // Wait for results to appear
   const firstResult = page.getByText("test_folder", { exact: true });
