@@ -301,9 +301,35 @@
           <div>
             <label class="block text-sm font-medium text-zinc-400 mb-1">フォント</label>
             <select bind:value={fontSetting} class="w-full bg-zinc-950 px-3 py-2 text-sm text-zinc-200 focus-visible:outline-none focus-visible:ring-0 border-0">
-              <option value="sans">Sans-serif (標準)</option>
-              <option value="serif">Serif (明朝体)</option>
-              <option value="mono">Monospace (等幅)</option>
+              <optgroup label="基本フォント">
+                <option value="sans">Sans-serif (標準)</option>
+                <option value="serif">Serif (明朝体)</option>
+                <option value="mono">Monospace (等幅)</option>
+              </optgroup>
+              <optgroup label="プログラミング向け (Monospace)">
+                <option value="fira-code">Fira Code</option>
+                <option value="jetbrains-mono">JetBrains Mono</option>
+                <option value="hack">Hack</option>
+                <option value="cascadia-code">Cascadia Code</option>
+                <option value="source-code-pro">Source Code Pro</option>
+                <option value="roboto-mono">Roboto Mono</option>
+                <option value="ibm-plex-mono">IBM Plex Mono</option>
+                <option value="inconsolata">Inconsolata</option>
+                <option value="consolas">Consolas</option>
+                <option value="ubuntu-mono">Ubuntu Mono</option>
+                <option value="dank-mono">Dank Mono</option>
+                <option value="victor-mono">Victor Mono</option>
+                <option value="space-mono">Space Mono</option>
+              </optgroup>
+              <optgroup label="サンセリフ (Sans-serif)">
+                <option value="inter">Inter</option>
+                <option value="roboto">Roboto</option>
+                <option value="open-sans">Open Sans</option>
+                <option value="lato">Lato</option>
+                <option value="montserrat">Montserrat</option>
+                <option value="noto-sans">Noto Sans</option>
+                <option value="ubuntu">Ubuntu</option>
+              </optgroup>
             </select>
           </div>
           <div>
