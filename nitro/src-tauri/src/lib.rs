@@ -16,6 +16,8 @@ pub struct AppSettings {
     pub theme_color: String,
     pub font_family: String,
     pub search_dirs: Vec<String>,
+    pub theme_mode: String,
+    pub show_invisibles: bool,
 }
 
 impl Default for AppSettings {
@@ -33,6 +35,8 @@ impl Default for AppSettings {
             theme_color: "zinc".to_string(),
             font_family: "sans".to_string(),
             search_dirs: default_dirs,
+            theme_mode: "system".to_string(),
+            show_invisibles: false,
         }
     }
 }
@@ -164,7 +168,7 @@ fn get_settings() -> AppSettings {
 }
 
 #[tauri::command]
-fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>, theme_mode: Option<String>, show_invisibles: Option<bool>) -> Result<(), String> {
     let path = get_settings_file_path().ok_or("Failed to get config path")?;
 
     let old_settings = get_settings();
@@ -172,7 +176,17 @@ fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, f
     let dirs = search_dirs.unwrap_or(old_settings.search_dirs.clone());
 
     let font = font_family.unwrap_or(old_settings.font_family.clone());
-    let settings = AppSettings { shortcut: shortcut.clone(), theme_color, font_family: font, search_dirs: dirs };
+    let t_mode = theme_mode.unwrap_or(old_settings.theme_mode.clone());
+    let s_invisibles = show_invisibles.unwrap_or(old_settings.show_invisibles);
+
+    let settings = AppSettings {
+        shortcut: shortcut.clone(),
+        theme_color,
+        font_family: font,
+        search_dirs: dirs,
+        theme_mode: t_mode,
+        show_invisibles: s_invisibles,
+    };
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())?;
 

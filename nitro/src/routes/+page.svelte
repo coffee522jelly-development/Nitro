@@ -11,12 +11,14 @@
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
+    | { type: "app"; id: number; app_name: string; title: string }
     | { type: "file"; path: string; name: string }
     | { type: "snippet"; title: string; content: string; tags?: string[] };
 
   let query = $state("");
   let results: SearchResult[] = $state([]);
   let inputRef = $state<HTMLInputElement | null>(null);
+  let searchMode = $state<"apps" | "files" | "snippets">("apps");
 
   // State for snippet creation
   let showSnippetDialog = $state(false);
@@ -33,23 +35,67 @@
   let themeColorSetting = $state("zinc");
   let fontSetting = $state("sans");
   let searchDirsSetting = $state("");
+  let themeModeSetting = $state("system");
+  let showInvisiblesSetting = $state(false);
+
+  // Sync scroll for snippet invisibles
+  let newSnippetTextarea: HTMLTextAreaElement | null = $state(null);
+  let newSnippetInvisibles: HTMLDivElement | null = $state(null);
+  let viewingSnippetTextarea: HTMLTextAreaElement | null = $state(null);
+  let viewingSnippetInvisibles: HTMLDivElement | null = $state(null);
+
+  function syncScroll(source: HTMLElement | null, target: HTMLElement | null) {
+    if (source && target) {
+      target.scrollTop = source.scrollTop;
+      target.scrollLeft = source.scrollLeft;
+    }
+  }
+
+  function renderInvisibles(text: string) {
+    if (!text) return "";
+    return text.replace(/ /g, '·').replace(/　/g, '□').replace(/\t/g, '→   ');
+  }
 
   async function loadSettings() {
     try {
-      let settings: { shortcut: string, theme_color: string, font_family: string, search_dirs: string[] } = await invoke("get_settings");
+      let settings: { shortcut: string, theme_color: string, font_family: string, search_dirs: string[], theme_mode: string, show_invisibles: boolean } = await invoke("get_settings");
       shortcutSetting = settings.shortcut;
       themeColorSetting = settings.theme_color;
       fontSetting = settings.font_family;
       searchDirsSetting = settings.search_dirs.join("\n");
+      themeModeSetting = settings.theme_mode;
+      showInvisiblesSetting = settings.show_invisibles;
+      applyThemeMode();
     } catch (e) {
       console.error("Failed to load settings:", e);
     }
   }
 
+  function applyThemeMode() {
+    let isDark = false;
+    if (themeModeSetting === "dark") {
+      isDark = true;
+    } else if (themeModeSetting === "light") {
+      isDark = false;
+    } else {
+      isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }
+
+  $effect(() => {
+    applyThemeMode();
+  });
+
   async function saveSettings() {
     try {
       let dirs = searchDirsSetting.split("\n").map(d => d.trim()).filter(d => d.length > 0);
-      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, fontFamily: fontSetting, searchDirs: dirs });
+      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, fontFamily: fontSetting, searchDirs: dirs, themeMode: themeModeSetting, showInvisibles: showInvisiblesSetting });
       showSettingsDialog = false;
       // Refocus input
       setTimeout(() => inputRef?.focus(), 100);
@@ -67,26 +113,36 @@
     }
 
     try {
-      let snippets: Snippet[] = await invoke<Snippet[]>("get_snippets").catch(() => []);
-
-      if (query.trim() === "") {
-        // If empty query, just show all snippets
-        results = snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
-      } else {
-        let files: string[] = await invoke<string[]>("search_files", { query }).catch(() => []);
-
-        const queryLower = query.toLowerCase();
-        let matchedSnippets = snippets.filter(s => {
-          let matchTitle = s.title.toLowerCase().includes(queryLower);
-          let matchContent = s.content.toLowerCase().includes(queryLower);
-          let matchTags = s.tags ? s.tags.some(tag => tag.toLowerCase().includes(queryLower)) : false;
-          return matchTitle || matchContent || matchTags;
-        });
-
-        results = [
-          ...matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags })),
-          ...files.map(f => ({ type: "file" as const, path: f, name: f.split(/[/\\]/).pop() || f }))
-        ];
+      if (searchMode === "apps") {
+        let openWindows: { id: number, app_name: string, title: string }[] = await invoke("app_get_open_windows").catch(() => []);
+        if (query.trim() !== "") {
+          const queryLower = query.toLowerCase();
+          openWindows = openWindows.filter(w =>
+            w.app_name.toLowerCase().includes(queryLower) || w.title.toLowerCase().includes(queryLower)
+          );
+        }
+        results = openWindows.map(w => ({ type: "app" as const, id: w.id, app_name: w.app_name, title: w.title }));
+      } else if (searchMode === "files") {
+        if (query.trim() === "") {
+          results = [];
+        } else {
+          let files: string[] = await invoke<string[]>("search_files", { query }).catch(() => []);
+          results = files.map(f => ({ type: "file" as const, path: f, name: f.split(/[/\\]/).pop() || f }));
+        }
+      } else if (searchMode === "snippets") {
+        let snippets: Snippet[] = await invoke<Snippet[]>("get_snippets").catch(() => []);
+        if (query.trim() === "") {
+          results = snippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
+        } else {
+          const queryLower = query.toLowerCase();
+          let matchedSnippets = snippets.filter(s => {
+            let matchTitle = s.title.toLowerCase().includes(queryLower);
+            let matchContent = s.content.toLowerCase().includes(queryLower);
+            let matchTags = s.tags ? s.tags.some(tag => tag.toLowerCase().includes(queryLower)) : false;
+            return matchTitle || matchContent || matchTags;
+          });
+          results = matchedSnippets.map(s => ({ type: "snippet" as const, title: s.title, content: s.content, tags: s.tags }));
+        }
       }
     } catch (e) {
       console.error("Search failed:", e);
@@ -106,13 +162,51 @@
       if (inputRef && document.activeElement !== inputRef) {
         inputRef.focus();
       }
+    } else if (event.key === "Tab") {
+      event.preventDefault();
+      if (searchMode === "apps") searchMode = "files";
+      else if (searchMode === "files") searchMode = "snippets";
+      else searchMode = "apps";
+      inputRef?.focus();
+    } else if (event.key === "Enter") {
+      // Manual enter trigger for shadcn-svelte command
+      const selectedEl = document.querySelector('[data-selected="true"]') as HTMLElement | null
+        || document.querySelector('[data-selected]') as HTMLElement | null;
+      if (selectedEl) {
+        selectedEl.click();
+      }
+    }
+  }
+
+  function handleWheel(event: WheelEvent) {
+    if (showSnippetDialog || viewingSnippet || showSettingsDialog) return;
+    if (results.length > 0 && inputRef) {
+      event.preventDefault();
+      if (event.deltaY > 0) {
+        inputRef.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      } else if (event.deltaY < 0) {
+        inputRef.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+      }
+    }
+  }
+
+  async function openParentDir(path: string) {
+    try {
+      const parentDir = path.substring(0, path.lastIndexOf(path.includes('\\') ? '\\' : '/'));
+      if (parentDir) {
+        await invoke("open_target", { path: parentDir });
+      }
+    } catch (e) {
+      console.error("Open parent dir failed:", e);
     }
   }
 
   async function executeResult(result: SearchResult) {
     try {
-      if (result.type === "file") {
-        await invoke("plugin:opener|open", { path: result.path });
+      if (result.type === "app") {
+        await invoke("focus_window", { id: result.id, appName: result.app_name });
+      } else if (result.type === "file") {
+        await invoke("open_target", { path: result.path });
       } else if (result.type === "snippet") {
         viewingSnippet = {
           title: result.title,
@@ -188,19 +282,28 @@
   });
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={handleKeydown} on:wheel|nonpassive={handleWheel} />
 
-<main class="container theme-{themeColorSetting} font-{fontSetting}">
+<main class="container theme-{themeColorSetting} font-{fontSetting} !p-0 w-full h-full bg-zinc-950">
   {#if viewingSnippet}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-2xl rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
+      <div class="w-full max-w-4xl rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
         <h2 class="mb-4 text-xl font-bold text-popover-foreground">{viewingSnippet.title}</h2>
         <div class="space-y-4">
-          <div>
+          <div class="relative">
+            {#if showInvisiblesSetting}
+              <div
+                bind:this={viewingSnippetInvisibles}
+                class="absolute inset-0 pointer-events-none break-words whitespace-pre-wrap rounded-md border !border-transparent px-3 py-2 font-mono text-sm text-muted-foreground/30 overflow-hidden"
+                style="z-index: 1;"
+              >{renderInvisibles(viewingSnippet.content)}</div>
+            {/if}
             <textarea
+              bind:this={viewingSnippetTextarea}
               readonly
-              class="flex min-h-[250px] w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+              class="relative z-10 flex min-h-[400px] w-full rounded-md border !border-[#333] {showInvisiblesSetting ? '!bg-transparent' : '!bg-black/50'} px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
               onkeydown={(e) => { if (e.key === 'Escape') viewingSnippet = null;  }}
+              onscroll={() => syncScroll(viewingSnippetTextarea, viewingSnippetInvisibles)}
             >{viewingSnippet.content}</textarea>
           </div>
           {#if viewingSnippet.tags && viewingSnippet.tags.length > 0}
@@ -263,6 +366,46 @@
             </select>
           </div>
           <div>
+            <label class="block text-sm font-medium text-muted-foreground mb-1">テーマモード</label>
+            <select bind:value={themeModeSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+              <option value="system">システム (System)</option>
+              <option value="dark">ダーク (Dark)</option>
+              <option value="light">ライト (Light)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-muted-foreground mb-1">フォント</label>
+            <select bind:value={fontSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+              <optgroup label="デフォルト">
+                <option value="sans">Sans Serif</option>
+                <option value="serif">Serif</option>
+                <option value="mono">Monospace</option>
+              </optgroup>
+              <optgroup label="Sans Serif">
+                <option value="inter">Inter</option>
+                <option value="roboto">Roboto</option>
+                <option value="open-sans">Open Sans</option>
+                <option value="lato">Lato</option>
+                <option value="montserrat">Montserrat</option>
+                <option value="noto-sans">Noto Sans (日本語)</option>
+                <option value="ubuntu">Ubuntu</option>
+              </optgroup>
+              <optgroup label="プログラミング/等幅">
+                <option value="fira-code">Fira Code (リガチャ可)</option>
+                <option value="jetbrains-mono">JetBrains Mono</option>
+                <option value="hack">Hack</option>
+                <option value="cascadia-code">Cascadia Code</option>
+                <option value="source-code-pro">Source Code Pro</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-muted-foreground mb-1">
+              <input type="checkbox" bind:checked={showInvisiblesSetting} class="mr-2" />
+              空白・タブ文字を可視化する
+            </label>
+          </div>
+          <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">検索対象ディレクトリ (1行に1つ)</label>
             <textarea bind:value={searchDirsSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 min-h-[100px]"></textarea>
           </div>
@@ -277,19 +420,28 @@
 
   {#if showSnippetDialog}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-2xl rounded-xl bg-popover p-6 shadow-2xl border border-border">
+      <div class="w-full max-w-4xl rounded-xl bg-popover p-6 shadow-2xl border border-border">
         <h2 class="mb-4 text-xl font-bold text-popover-foreground">新しいスニペット</h2>
         <div class="space-y-4">
           <div>
             <!-- svelte-ignore a11y_autofocus -->
             <Input bind:value={newSnippetTitle} placeholder="タイトル" class="w-full font-mono text-sm" autofocus onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; }}/>
           </div>
-          <div>
+          <div class="relative">
+            {#if showInvisiblesSetting}
+              <div
+                bind:this={newSnippetInvisibles}
+                class="absolute inset-0 pointer-events-none break-words whitespace-pre-wrap rounded-md border !border-transparent px-3 py-2 font-mono text-sm text-muted-foreground/30 overflow-hidden"
+                style="z-index: 1;"
+              >{renderInvisibles(newSnippetContent)}</div>
+            {/if}
             <textarea
+              bind:this={newSnippetTextarea}
               bind:value={newSnippetContent}
               placeholder="スニペット内容"
-              class="flex min-h-[250px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              class="relative z-10 flex min-h-[400px] w-full rounded-md border border-input {showInvisiblesSetting ? 'bg-transparent' : 'bg-background'} px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
               onkeydown={(e) => { if (e.key === 'Escape') showSnippetDialog = false; else if (e.key === 'Enter' && e.ctrlKey) handleSaveSnippet(); }}
+              onscroll={() => syncScroll(newSnippetTextarea, newSnippetInvisibles)}
             ></textarea>
           </div>
           <div>
@@ -305,24 +457,31 @@
     </div>
   {/if}
 
-  <Command.Root shouldFilter={false} class="w-full max-w-[800px] rounded-xl !border-[#333] shadow-2xl !bg-[#1e1e1e] text-popover-foreground overflow-hidden">
+  <Command.Root shouldFilter={false} class="w-full h-full !rounded-none !border-none shadow-none !bg-[#1e1e1e] text-popover-foreground overflow-hidden flex flex-col">
     <div class="flex items-center border-b !border-[#333] px-3">
+      <div class="flex space-x-1 mr-2 bg-black/30 p-1 rounded-md">
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'apps' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "apps"; inputRef?.focus(); }}>Apps</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'files' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "files"; inputRef?.focus(); }}>Files</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'snippets' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "snippets"; inputRef?.focus(); }}>Snippets</button>
+      </div>
       <div class="flex-1">
         <Command.Input
           bind:ref={inputRef}
           bind:value={query}
-          placeholder="ファイルやスニペットを検索..."
+          placeholder={searchMode === 'apps' ? "アプリを検索..." : searchMode === 'files' ? "ファイルを検索..." : "スニペットを検索..."}
           autofocus
-          class="text-xl border-0 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-14 px-2"
+          class="text-xl border-0 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-14 px-2 bg-transparent"
         />
       </div>
-      <button
-        class="ml-2 rounded-md bg-secondary/50 px-3 py-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0"
-        onclick={() => showSnippetDialog = true}
-        title="スニペット追加"
-      >
-        <span class="mr-1">➕</span> スニペット
-      </button>
+      {#if searchMode === "snippets"}
+        <button
+          class="ml-2 rounded-md bg-secondary/50 px-3 py-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0"
+          onclick={() => showSnippetDialog = true}
+          title="スニペット追加"
+        >
+          <span class="mr-1">➕</span> スニペット
+        </button>
+      {/if}
       <button
         class="ml-2 rounded-md bg-secondary/50 p-1.5 text-sm font-medium hover:bg-secondary flex items-center shrink-0 text-muted-foreground"
         onclick={() => showSettingsDialog = true}
@@ -333,20 +492,32 @@
     </div>
 
     {#if results.length > 0}
-      <Command.List>
+      <Command.List class="flex-1 h-full overflow-y-auto">
         {#each results as result, i}
           <Command.Item
-            value={result.type === "snippet" ? `snippet-${result.title}` : `file-${result.path}`}
+            value={result.type === "snippet" ? `snippet-${result.title}` : result.type === "app" ? `app-${result.id}` : `file-${result.path}`}
             onSelect={() => { executeResult(result); }}
+            ondblclick={() => { executeResult(result); }}
           >
             {#if result.type === "snippet"}
-              <span class="file-icon">📋</span>
-              <span class="file-name font-medium">{result.title}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2">Snippet</span>
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">📋</span>
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.title}</span>
+              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70">Snippet</span>
+            {:else if result.type === "app"}
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">🪟</span>
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.title}</span>
+              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70">{result.app_name}</span>
             {:else}
-              <span class="file-icon">📄</span>
-              <span class="file-name font-medium">{result.name}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap">{result.path}</span>
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">📄</span>
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.name}</span>
+              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap group-data-[selected]/command-item:text-primary-foreground/70 flex-1 text-right">{result.path}</span>
+              <button
+                class="ml-2 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                onclick={(e) => { e.stopPropagation(); openParentDir(result.path); }}
+                title="フォルダを開く"
+              >
+                📁
+              </button>
             {/if}
           </Command.Item>
         {/each}
@@ -367,7 +538,6 @@
   .container {
     width: 100vw;
     height: 100vh;
-    padding: 20px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;

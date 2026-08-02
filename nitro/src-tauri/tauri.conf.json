@@ -14,10 +14,10 @@
     "windows": [
       {
         "title": "Nitro",
-        "width": 900,
-        "height": 600,
+        "width": 1100,
+        "height": 700,
         "decorations": false,
-        "transparent": true,
+        "transparent": false,
         "visible": false,
         "center": true
       }
