@@ -8,6 +8,14 @@
   import SettingsIcon from "lucide-svelte/icons/settings";
   import CopyIcon from "lucide-svelte/icons/copy";
   import Trash2Icon from "lucide-svelte/icons/trash-2";
+  import GlobeIcon from "lucide-svelte/icons/globe";
+  import CodeIcon from "lucide-svelte/icons/code";
+  import TerminalIcon from "lucide-svelte/icons/terminal";
+  import AppWindowIcon from "lucide-svelte/icons/app-window";
+  import FileTextIcon from "lucide-svelte/icons/file-text";
+  import FolderOpenIcon from "lucide-svelte/icons/folder-open";
+  import ClipboardListIcon from "lucide-svelte/icons/clipboard-list";
+  import FileIcon from "lucide-svelte/icons/file";
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
@@ -56,6 +64,23 @@
   function renderInvisibles(text: string) {
     if (!text) return "";
     return text.replace(/ /g, '·').replace(/　/g, '□').replace(/\t/g, '→\t');
+  }
+
+  function getAppIcon(appName: string, title: string) {
+    const nameLower = appName.toLowerCase();
+    const titleLower = title.toLowerCase();
+    const combined = `${nameLower} ${titleLower}`;
+
+    if (combined.includes('chrome') || combined.includes('edge') || combined.includes('firefox') || combined.includes('safari') || combined.includes('brave') || combined.includes('browser')) {
+      return GlobeIcon;
+    }
+    if (combined.includes('code') || combined.includes('cursor') || combined.includes('intellij') || combined.includes('sublime') || combined.includes('studio') || combined.includes('vim') || combined.includes('edit')) {
+      return CodeIcon;
+    }
+    if (combined.includes('term') || combined.includes('powershell') || combined.includes('bash') || combined.includes('cmd') || combined.includes('console') || combined.includes('alacritty')) {
+      return TerminalIcon;
+    }
+    return AppWindowIcon;
   }
 
   async function loadSettings() {
@@ -546,26 +571,26 @@
             ondblclick={(e) => { e.preventDefault(); executeResult(result); }}
           >
             {#if result.type === "snippet"}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">📋</span>
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><ClipboardListIcon class="size-5" /></span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.title}</span>
               <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70">Snippet</span>
             {:else if result.type === "app"}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">🪟</span>
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><svelte:component this={getAppIcon(result.app_name, result.title)} class="size-5" /></span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.title}</span>
               <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70">{result.app_name}</span>
             {:else if result.type === "web"}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">🌐</span>
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><GlobeIcon class="size-5" /></span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">"{result.query}" をWebで検索</span>
             {:else}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground">📄</span>
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><FileIcon class="size-5" /></span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.name}</span>
               <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap group-data-[selected]/command-item:text-primary-foreground/70 flex-1 text-right">{result.path}</span>
               <button
-                class="ml-2 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                class="ml-2 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors flex items-center justify-center"
                 onclick={(e) => { e.stopPropagation(); openParentDir(result.path); }}
                 title="フォルダを開く"
               >
-                📁
+                <FolderOpenIcon class="size-4" />
               </button>
             {/if}
           </Command.Item>

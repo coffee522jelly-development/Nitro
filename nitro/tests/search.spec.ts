@@ -24,8 +24,9 @@ test('search palette handles empty and populated queries', async ({ page }) => {
   await expect(searchInput).toBeVisible();
 
   // Test snippet button opens dialog
+  await page.getByText("Snippets").click();
   const snippetBtn = page.getByTitle("スニペット追加");
-  await page.getByText("Snippets").click(); await page.getByTitle("スニペット追加").click();
+  await snippetBtn.click();
 
   // Expect Dialog to open
   const dialogTitle = page.getByText("新しいスニペット");
@@ -83,7 +84,8 @@ test('can create and search for a code snippet', async ({ page }) => {
   await expect(searchInput).toBeVisible();
 
   // Click the Snippet button
-  await page.getByText("Snippets").click(); await page.getByText("Snippets").click(); await page.getByText("Snippets").click(); await page.getByTitle("スニペット追加").click();
+  await page.getByText("Snippets").click();
+  await page.getByTitle("スニペット追加").click();
 
   // Fill the dialog
   await page.getByPlaceholder("タイトル").fill("Test Snippet Demo");
@@ -155,7 +157,8 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await page.goto('/');
 
   // Open snippet dialog
-  await page.getByText("Snippets").click(); await page.getByText("Snippets").click(); await page.getByText("Snippets").click(); await page.getByTitle("スニペット追加").click();
+  await page.getByText("Snippets").click();
+  await page.getByTitle("スニペット追加").click();
 
   // Fill the dialog with Japanese text
   await page.getByPlaceholder("タイトル").fill("日本語のテスト");
@@ -166,11 +169,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
   await page.getByRole('button', { name: 'OK' }).click({ force: true });
 
   // Search using Japanese
-  const searchInput = page.getByPlaceholder("アプリを検索...");
-  await page.waitForTimeout(500);
   await page.getByText("Snippets").click();
-  await page.getByText("Snippets").click();
-  await page.waitForTimeout(500);
   await page.getByPlaceholder("スニペットを検索...").fill("日本語");
 
   // Result should be visible
