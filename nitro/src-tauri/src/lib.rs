@@ -2,6 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Snippet {
@@ -296,6 +297,7 @@ fn build_tray_menu(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Err
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(ClipboardHistory { items: Mutex::new(Vec::new()) })
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, _shortcut, event| {
@@ -317,6 +319,26 @@ pub fn run() {
 
             let _ = build_tray_menu(app.handle());
 
+
+            // Clipboard history polling thread
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                let mut last_text = String::new();
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                    if let Ok(text) = app_handle.clipboard().read_text() {
+                        if text != last_text && !text.trim().is_empty() {
+                            last_text = text.clone();
+                            let state = app_handle.state::<ClipboardHistory>();
+                            let mut items = state.items.lock().unwrap();
+                            items.retain(|i| i != &text);
+                            items.insert(0, text);
+                            items.truncate(20);
+                        }
+                    }
+                }
+            });
+
             // Register configured shortcut
             let settings = get_settings();
             let parsed_shortcut: Shortcut = settings.shortcut.parse().unwrap_or_else(|_| {
@@ -329,7 +351,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, delete_snippet, get_settings, save_settings, app_get_open_windows, focus_window, open_target])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, delete_snippet, get_settings, save_settings, app_get_open_windows, focus_window, open_target, get_clipboard_history])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -357,6 +379,16 @@ fn app_get_open_windows() -> Vec<AppWindow> {
         }
     }
     results
+}
+
+
+struct ClipboardHistory {
+    items: Mutex<Vec<String>>,
+}
+
+#[tauri::command]
+fn get_clipboard_history(state: tauri::State<'_, ClipboardHistory>) -> Vec<String> {
+    state.items.lock().unwrap().clone()
 }
 
 #[tauri::command]

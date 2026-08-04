@@ -16,18 +16,20 @@
   import FolderOpenIcon from "lucide-svelte/icons/folder-open";
   import ClipboardListIcon from "lucide-svelte/icons/clipboard-list";
   import FileIcon from "lucide-svelte/icons/file";
+  import SearchIcon from "lucide-svelte/icons/search";
 
   type Snippet = { title: string; content: string; tags?: string[] };
   type SearchResult =
     | { type: "app"; id: number; app_name: string; title: string }
     | { type: "file"; path: string; name: string }
     | { type: "snippet"; title: string; content: string; tags?: string[] }
-    | { type: "web"; query: string };
+    | { type: "web"; query: string }
+    | { type: "clipboard"; text: string };
 
   let query = $state("");
   let results: SearchResult[] = $state([]);
   let inputRef = $state<HTMLInputElement | null>(null);
-  let searchMode = $state<"apps" | "files" | "snippets" | "web">("apps");
+  let searchMode = $state<"apps" | "files" | "snippets" | "web" | "clipboard">("apps");
 
   // State for snippet creation
   let showSnippetDialog = $state(false);
@@ -135,7 +137,7 @@
   async function performSearch(currentQuery: string, currentMode: string) {
     try {
       if (currentMode === "apps") {
-        let openWindows: { id: number, app_name: string, title: string }[] = await invoke("app_get_open_windows").catch(() => []);
+        let openWindows: { id: number, app_name: string, title: string }[] = await invoke<{ id: number, app_name: string, title: string }[]>("app_get_open_windows").catch(() => []);
         if (currentQuery.trim() !== "") {
           const queryLower = currentQuery.toLowerCase();
           openWindows = openWindows.filter(w =>
@@ -170,6 +172,13 @@
         } else {
           results = [];
         }
+      } else if (currentMode === "clipboard") {
+        let history: string[] = await invoke<string[]>("get_clipboard_history").catch(() => []);
+        if (currentQuery.trim() !== "") {
+          const queryLower = currentQuery.toLowerCase();
+          history = history.filter(item => item.toLowerCase().includes(queryLower));
+        }
+        results = history.map(h => ({ type: "clipboard" as const, text: h }));
       }
     } catch (e) {
       console.error("Search failed:", e);
@@ -211,6 +220,7 @@
       if (searchMode === "apps") searchMode = "files";
       else if (searchMode === "files") searchMode = "snippets";
       else if (searchMode === "snippets") searchMode = "web";
+      else if (searchMode === "web") searchMode = "clipboard";
       else searchMode = "apps";
       inputRef?.focus();
     } else if (event.key === "Enter") {
@@ -264,6 +274,9 @@
       } else if (result.type === "web") {
         const url = `https://www.google.com/search?q=${encodeURIComponent(result.query)}`;
         await invoke("open_target", { path: url });
+        getCurrentWindow().hide();
+      } else if (result.type === "clipboard") {
+        await writeText(result.text);
         getCurrentWindow().hide();
       }
     } catch (e) {
@@ -534,12 +547,14 @@
         <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'files' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "files"; inputRef?.focus(); }}>Files</button>
         <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'snippets' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "snippets"; inputRef?.focus(); }}>Snippets</button>
         <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'web' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "web"; inputRef?.focus(); }}>Web</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'clipboard' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "clipboard"; inputRef?.focus(); }}>Clipboard</button>
       </div>
-      <div class="flex-1">
+      <div class="flex-1 flex items-center">
+        <SearchIcon class="size-5 text-muted-foreground ml-2 shrink-0" />
         <Command.Input
           bind:ref={inputRef}
           bind:value={query}
-          placeholder={searchMode === 'apps' ? "アプリを検索..." : searchMode === 'files' ? "ファイルを検索..." : searchMode === 'web' ? "Webで検索..." : "スニペットを検索..."}
+          placeholder={searchMode === 'apps' ? "アプリを検索..." : searchMode === 'files' ? "ファイルを検索..." : searchMode === 'web' ? "Webで検索..." : searchMode === 'clipboard' ? "クリップボードを検索..." : "スニペットを検索..."}
           autofocus
           class="text-xl border-0 !ring-0 focus-visible:!ring-0 !outline-none focus-visible:!outline-none shadow-none h-14 px-2 bg-transparent"
         />
@@ -566,7 +581,7 @@
       <Command.List class="flex-1 h-full overflow-y-auto">
         {#each results as result, i}
           <Command.Item
-            value={result.type === "snippet" ? `snippet-${result.title}` : result.type === "app" ? `app-${result.id}` : result.type === "web" ? `web-${result.query}` : `file-${result.path}`}
+            value={result.type === "snippet" ? `snippet-${result.title}` : result.type === "app" ? `app-${result.id}` : result.type === "web" ? `web-${result.query}` : result.type === 'clipboard' ? `clip-${result.text}` : `file-${result.path}`}
             onSelect={() => { executeResult(result); }}
             ondblclick={(e) => { e.preventDefault(); executeResult(result); }}
           >
@@ -581,6 +596,17 @@
             {:else if result.type === "web"}
               <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><GlobeIcon class="size-5" /></span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">"{result.query}" をWebで検索</span>
+            {:else if result.type === "clipboard"}
+              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><ClipboardListIcon class="size-5" /></span>
+              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-ellipsis overflow-hidden whitespace-nowrap">{result.text}</span>
+              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 flex-1 text-right">Clipboard</span>
+              <button
+                class="ml-2 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors whitespace-nowrap"
+                onclick={(e) => { e.stopPropagation(); newSnippetContent = result.text; showSnippetDialog = true; }}
+                title="スニペットへ追加"
+              >
+                📋 スニペットへ追加
+              </button>
             {:else}
               <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><FileIcon class="size-5" /></span>
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.name}</span>

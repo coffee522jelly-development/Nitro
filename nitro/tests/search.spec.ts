@@ -8,6 +8,7 @@ test('search palette handles empty and populated queries', async ({ page }) => {
         if (cmd === "focus_window") return Promise.resolve();
         if (cmd === "app_get_open_windows") return Promise.resolve([]);
         if (cmd === "get_snippets") return [];
+        if (cmd === "get_clipboard_history") return ["test clipboard"];
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
         if (cmd === "plugin:event|listen") return Promise.resolve(1234);
         if (cmd === "plugin:event|unlisten") return Promise.resolve();
@@ -63,6 +64,7 @@ test('can create and search for a code snippet', async ({ page }) => {
         if (cmd === "get_snippets") {
           return snippets;
         }
+        if (cmd === "get_clipboard_history") return ["test clipboard"];
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
         if (cmd === "plugin:event|listen") return Promise.resolve(1234);
         if (cmd === "plugin:event|unlisten") return Promise.resolve();
@@ -70,6 +72,7 @@ test('can create and search for a code snippet', async ({ page }) => {
           snippets.push({ title: args.title, content: args.content, tags: args.tags });
           return;
         }
+        if (cmd === "get_clipboard_history") return ["test clipboard"];
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
         if (cmd === "plugin:event|listen") return Promise.resolve(1234);
         if (cmd === "plugin:event|unlisten") return Promise.resolve();
@@ -139,6 +142,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
           return Promise.resolve([]);
         }
         if (cmd === "get_snippets") return snippets;
+        if (cmd === "get_clipboard_history") return ["test clipboard"];
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
         if (cmd === "plugin:event|listen") return Promise.resolve(1234);
         if (cmd === "plugin:event|unlisten") return Promise.resolve();
@@ -146,6 +150,7 @@ test('can create and search for a japanese code snippet', async ({ page }) => {
           snippets.push({ title: args.title, content: args.content, tags: args.tags });
           return;
         }
+        if (cmd === "get_clipboard_history") return ["test clipboard"];
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "zinc", search_dirs: [] };
         if (cmd === "plugin:event|listen") return Promise.resolve(1234);
         if (cmd === "plugin:event|unlisten") return Promise.resolve();

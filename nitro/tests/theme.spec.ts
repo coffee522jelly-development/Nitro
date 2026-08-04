@@ -31,6 +31,7 @@ test('theme class is applied and item background is highlighted', async ({ page 
           }
           return null;
         }
+        if (cmd === "get_clipboard_history") return ["test clipboard"];
         if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "red", search_dirs: ["/mock/path"] };
         return null;
       }
