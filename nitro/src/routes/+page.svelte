@@ -218,9 +218,9 @@
     } else if (event.key === "Tab") {
       event.preventDefault();
       if (searchMode === "apps") searchMode = "files";
-      else if (searchMode === "files") searchMode = "snippets";
-      else if (searchMode === "snippets") searchMode = "web";
+      else if (searchMode === "files") searchMode = "web";
       else if (searchMode === "web") searchMode = "clipboard";
+      else if (searchMode === "clipboard") searchMode = "snippets";
       else searchMode = "apps";
       inputRef?.focus();
     } else if (event.key === "Enter") {
@@ -360,10 +360,10 @@
 
 <svelte:window on:keydown={handleKeydown} on:wheel|nonpassive={handleWheel} />
 
-<main class="container theme-{themeColorSetting} font-{fontSetting} !p-0 w-full h-full bg-zinc-950">
+<main class="container theme-{themeColorSetting} font-{fontSetting} !p-0 w-full h-full bg-background text-foreground">
   {#if viewingSnippet}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-4xl rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
+      <div class="w-full max-w-4xl rounded-xl bg-card text-card-foreground p-6 shadow-2xl border border-border">
         <h2 class="mb-4 text-xl font-bold text-popover-foreground">{viewingSnippet.title}</h2>
         <div class="space-y-4">
           <div class="relative">
@@ -402,8 +402,8 @@
               <span>削除</span>
             </button>
             <div class="flex space-x-2">
-              <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => viewingSnippet = null}>閉じる</button>
-              <button class="flex items-center space-x-1 rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={copySnippet}>
+              <button class="rounded-md px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors" onclick={() => viewingSnippet = null}>閉じる</button>
+              <button class="flex items-center space-x-1 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 transition-colors" onclick={copySnippet}>
                 <CopyIcon class="size-4" />
                 <span>コピー</span>
               </button>
@@ -416,12 +416,12 @@
 
   {#if showSettingsDialog}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-md rounded-xl !bg-[#1e1e1e] p-6 shadow-2xl border !border-[#333]">
+      <div class="w-full max-w-md rounded-xl bg-card text-card-foreground p-6 shadow-2xl border border-border">
         <h2 class="mb-4 text-xl font-bold text-popover-foreground">設定</h2>
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">起動ショートカット</label>
-            <select bind:value={shortcutSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+            <select bind:value={shortcutSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
               <option value="Ctrl+Space">Ctrl+Space</option>
               <option value="Alt+Space">Alt+Space</option>
               <option value="Super+Space">Super+Space</option>
@@ -429,7 +429,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">テーマカラー</label>
-            <select bind:value={themeColorSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+            <select bind:value={themeColorSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
               <option value="zinc">ジンク (Zinc)</option>
               <option value="slate">スレート (Slate)</option>
               <option value="neutral">ニュートラル (Neutral)</option>
@@ -444,7 +444,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">テーマモード</label>
-            <select bind:value={themeModeSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+            <select bind:value={themeModeSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
               <option value="system">システム (System)</option>
               <option value="dark">ダーク (Dark)</option>
               <option value="light">ライト (Light)</option>
@@ -452,7 +452,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">フォント</label>
-            <select bind:value={fontSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+            <select bind:value={fontSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
               <optgroup label="デフォルト">
                 <option value="sans">Sans Serif</option>
                 <option value="serif">Serif</option>
@@ -484,16 +484,16 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">ファイル検索遅延 (ミリ秒)</label>
-            <input type="number" bind:value={searchDebounceSetting} min="0" step="100" class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0" />
+            <input type="number" bind:value={searchDebounceSetting} min="0" step="100" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0" />
             <p class="text-xs text-muted-foreground mt-1">入力ごとに検索がかかるのを防ぎ、動作を軽くします。</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">検索対象ディレクトリ (1行に1つ)</label>
-            <textarea bind:value={searchDirsSetting} class="w-full rounded-md border !border-[#333] !bg-black/50 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 min-h-[100px]"></textarea>
+            <textarea bind:value={searchDirsSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 min-h-[100px]"></textarea>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => showSettingsDialog = false}>キャンセル</button>
-            <button class="rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={saveSettings}>保存</button>
+            <button class="rounded-md px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors" onclick={() => showSettingsDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 transition-colors" onclick={saveSettings}>保存</button>
           </div>
         </div>
       </div>
@@ -502,7 +502,7 @@
 
   {#if showSnippetDialog}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div class="w-full max-w-4xl rounded-xl bg-popover p-6 shadow-2xl border border-border">
+      <div class="w-full max-w-4xl rounded-xl bg-card text-card-foreground p-6 shadow-2xl border border-border">
         <h2 class="mb-4 text-xl font-bold text-popover-foreground">新しいスニペット</h2>
         <div class="space-y-4">
           <div>
@@ -532,22 +532,22 @@
             <p class="mt-2 text-xs text-muted-foreground">保存するには Ctrl+Enter を押してください</p>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm hover:bg-zinc-800 hover:text-zinc-100 text-zinc-300 transition-colors" onclick={() => showSnippetDialog = false}>キャンセル</button>
-            <button class="rounded-md bg-zinc-100 px-4 py-2 text-sm text-zinc-900 hover:bg-zinc-200 transition-colors" onclick={handleSaveSnippet}>OK</button>
+            <button class="rounded-md px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors" onclick={() => showSnippetDialog = false}>キャンセル</button>
+            <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 transition-colors" onclick={handleSaveSnippet}>OK</button>
           </div>
         </div>
       </div>
     </div>
   {/if}
 
-  <Command.Root shouldFilter={false} class="w-full h-full !rounded-none !border-none shadow-none !bg-[#1e1e1e] text-popover-foreground overflow-hidden flex flex-col">
-    <div class="flex items-center border-b !border-[#333] px-3">
-      <div class="flex space-x-1 mr-2 bg-black/30 p-1 rounded-md">
-        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'apps' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "apps"; inputRef?.focus(); }}>Apps</button>
-        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'files' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "files"; inputRef?.focus(); }}>Files</button>
-        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'snippets' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "snippets"; inputRef?.focus(); }}>Snippets</button>
-        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'web' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "web"; inputRef?.focus(); }}>Web</button>
-        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'clipboard' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}" onclick={() => { searchMode = "clipboard"; inputRef?.focus(); }}>Clipboard</button>
+  <Command.Root shouldFilter={false} class="w-full h-full !rounded-none !border-none shadow-none !bg-background text-foreground overflow-hidden flex flex-col">
+    <div class="flex items-center border-b border-border px-3">
+      <div class="flex space-x-1 mr-2 bg-muted/50 p-1 rounded-md">
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'apps' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}" onclick={() => { searchMode = "apps"; inputRef?.focus(); }}>Apps</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'files' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}" onclick={() => { searchMode = "files"; inputRef?.focus(); }}>Files</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'web' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}" onclick={() => { searchMode = "web"; inputRef?.focus(); }}>Web</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'clipboard' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}" onclick={() => { searchMode = "clipboard"; inputRef?.focus(); }}>Clipboard</button>
+        <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'snippets' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}" onclick={() => { searchMode = "snippets"; inputRef?.focus(); }}>Snippets</button>
       </div>
       <div class="flex-1 flex items-center">
         <SearchIcon class="size-5 text-muted-foreground ml-2 shrink-0" />
@@ -601,7 +601,7 @@
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-ellipsis overflow-hidden whitespace-nowrap">{result.text}</span>
               <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 flex-1 text-right">Clipboard</span>
               <button
-                class="ml-2 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors whitespace-nowrap"
+                class="ml-2 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors whitespace-nowrap"
                 onclick={(e) => { e.stopPropagation(); newSnippetContent = result.text; showSnippetDialog = true; }}
                 title="スニペットへ追加"
               >
@@ -612,7 +612,7 @@
               <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.name}</span>
               <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap group-data-[selected]/command-item:text-primary-foreground/70 flex-1 text-right">{result.path}</span>
               <button
-                class="ml-2 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors flex items-center justify-center"
+                class="ml-2 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors flex items-center justify-center"
                 onclick={(e) => { e.stopPropagation(); openParentDir(result.path); }}
                 title="フォルダを開く"
               >

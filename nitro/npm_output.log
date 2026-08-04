@@ -1,0 +1,23 @@
+
+> nitro@0.1.0 dev
+> vite dev
+
+You have specified a baseUrl and/or paths in your tsconfig.json which interferes with SvelteKit's auto-generated tsconfig.json. Remove it to avoid problems with intellisense. For path aliases, use `kit.alias` instead: https://svelte.dev/docs/kit/configuration#alias
+
+  VITE v6.4.3  ready in 2341 ms
+
+  ➜  Local:   http://localhost:1420/
+4:12:11 PM [vite-plugin-svelte] src/routes/+page.svelte:423:12 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+4:12:11 PM [vite-plugin-svelte] src/routes/+page.svelte:431:12 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+4:12:11 PM [vite-plugin-svelte] src/routes/+page.svelte:446:12 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+4:12:11 PM [vite-plugin-svelte] src/routes/+page.svelte:454:12 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+4:12:11 PM [vite-plugin-svelte] src/routes/+page.svelte:486:12 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+4:12:11 PM [vite-plugin-svelte] src/routes/+page.svelte:491:12 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+4:12:11 PM [vite-plugin-svelte] src/routes/+page.svelte:593:143 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated
