@@ -230,6 +230,12 @@
       if (selectedEl) {
         selectedEl.click();
       }
+    } else if (event.key === " " && (event.ctrlKey || event.metaKey || event.altKey)) {
+      // Allow shortcut modifier + Space to act as ArrowDown for quick navigation
+      event.preventDefault();
+      if (inputRef) {
+        inputRef.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      }
     }
   }
 
@@ -540,7 +546,7 @@
     </div>
   {/if}
 
-  <Command.Root shouldFilter={false} class="w-full h-full !rounded-none !border-none shadow-none !bg-background text-foreground overflow-hidden flex flex-col">
+  <Command.Root shouldFilter={false} loop={true} class="w-full h-full !rounded-none !border-none shadow-none !bg-background text-foreground overflow-hidden flex flex-col">
     <div class="flex items-center border-b border-border px-3">
       <div class="flex space-x-1 mr-2 bg-muted/50 p-1 rounded-md">
         <button class="px-3 py-1 text-sm rounded-md transition-colors {searchMode === 'apps' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}" onclick={() => { searchMode = "apps"; inputRef?.focus(); }}>Apps</button>
@@ -585,40 +591,57 @@
             onSelect={() => { executeResult(result); }}
             ondblclick={(e) => { e.preventDefault(); executeResult(result); }}
           >
-            {#if result.type === "snippet"}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><ClipboardListIcon class="size-5" /></span>
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.title}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70">Snippet</span>
-            {:else if result.type === "app"}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><svelte:component this={getAppIcon(result.app_name, result.title)} class="size-5" /></span>
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.title}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70">{result.app_name}</span>
-            {:else if result.type === "web"}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><GlobeIcon class="size-5" /></span>
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">"{result.query}" をWebで検索</span>
-            {:else if result.type === "clipboard"}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><ClipboardListIcon class="size-5" /></span>
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-ellipsis overflow-hidden whitespace-nowrap">{result.text}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 flex-1 text-right">Clipboard</span>
-              <button
-                class="ml-2 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors whitespace-nowrap"
-                onclick={(e) => { e.stopPropagation(); newSnippetContent = result.text; showSnippetDialog = true; }}
-                title="スニペットへ追加"
-              >
-                📋 スニペットへ追加
-              </button>
-            {:else}
-              <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><FileIcon class="size-5" /></span>
-              <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground">{result.name}</span>
-              <span class="file-path text-sm text-muted-foreground ml-auto overflow-hidden text-ellipsis whitespace-nowrap group-data-[selected]/command-item:text-primary-foreground/70 flex-1 text-right">{result.path}</span>
-              <button
-                class="ml-2 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors flex items-center justify-center"
-                onclick={(e) => { e.stopPropagation(); openParentDir(result.path); }}
-                title="フォルダを開く"
-              >
-                <FolderOpenIcon class="size-4" />
-              </button>
-            {/if}
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 w-full items-center">
+              {#if result.type === "snippet"}
+                <div class="flex items-center min-w-0">
+                  <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><ClipboardListIcon class="size-5" /></span>
+                  <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground truncate">{result.title}</span>
+                </div>
+                <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 text-right">Snippet</span>
+              {:else if result.type === "app"}
+                <div class="flex items-center min-w-0">
+                  <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><svelte:component this={getAppIcon(result.app_name, result.title)} class="size-5" /></span>
+                  <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground truncate">{result.title}</span>
+                </div>
+                <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 text-right">{result.app_name}</span>
+              {:else if result.type === "web"}
+                <div class="flex items-center min-w-0">
+                  <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><GlobeIcon class="size-5" /></span>
+                  <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground truncate">"{result.query}" をWebで検索</span>
+                </div>
+                <div></div>
+              {:else if result.type === "clipboard"}
+                <div class="flex items-center min-w-0">
+                  <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><ClipboardListIcon class="size-5" /></span>
+                  <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground text-ellipsis overflow-hidden whitespace-nowrap">{result.text}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 text-right">Clipboard</span>
+                  <button
+                    class="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors whitespace-nowrap"
+                    onclick={(e) => { e.stopPropagation(); newSnippetContent = result.text; showSnippetDialog = true; }}
+                    title="スニペットへ追加"
+                  >
+                    📋 スニペットへ追加
+                  </button>
+                </div>
+              {:else}
+                <div class="flex items-center min-w-0">
+                  <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><FileIcon class="size-5" /></span>
+                  <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground truncate">{result.name}</span>
+                </div>
+                <div class="flex items-center space-x-2 w-full justify-end min-w-0">
+                  <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap group-data-[selected]/command-item:text-primary-foreground/70 text-right">{result.path}</span>
+                  <button
+                    class="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors flex items-center justify-center shrink-0"
+                    onclick={(e) => { e.stopPropagation(); openParentDir(result.path); }}
+                    title="フォルダを開く"
+                  >
+                    <FolderOpenIcon class="size-4" />
+                  </button>
+                </div>
+              {/if}
+            </div>
           </Command.Item>
         {/each}
       </Command.List>
