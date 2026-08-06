@@ -43,7 +43,8 @@
   // State for settings
   let showSettingsDialog = $state(false);
   let shortcutSetting = $state("Ctrl+Space");
-  let themeColorSetting = $state("zinc");
+  let themeBackgroundSetting = $state("zinc");
+  let themeAccentSetting = $state("zinc");
   let fontSetting = $state("sans");
   let searchDirsSetting = $state("");
   let themeModeSetting = $state("system");
@@ -87,9 +88,10 @@
 
   async function loadSettings() {
     try {
-      let settings: { shortcut: string, theme_color: string, font_family: string, search_dirs: string[], theme_mode: string, show_invisibles: boolean, search_debounce_ms: number } = await invoke("get_settings");
+      let settings: { shortcut: string, theme_background: string, theme_accent: string, font_family: string, search_dirs: string[], theme_mode: string, show_invisibles: boolean, search_debounce_ms: number } = await invoke("get_settings");
       shortcutSetting = settings.shortcut;
-      themeColorSetting = settings.theme_color;
+      themeBackgroundSetting = settings.theme_background;
+      themeAccentSetting = settings.theme_accent;
       fontSetting = settings.font_family;
       searchDirsSetting = settings.search_dirs.join("\n");
       themeModeSetting = settings.theme_mode;
@@ -125,7 +127,7 @@
   async function saveSettings() {
     try {
       let dirs = searchDirsSetting.split("\n").map(d => d.trim()).filter(d => d.length > 0);
-      await invoke("save_settings", { shortcut: shortcutSetting, themeColor: themeColorSetting, fontFamily: fontSetting, searchDirs: dirs, themeMode: themeModeSetting, showInvisibles: showInvisiblesSetting, searchDebounceMs: searchDebounceSetting });
+      await invoke("save_settings", { shortcut: shortcutSetting, themeBackground: themeBackgroundSetting, themeAccent: themeAccentSetting, fontFamily: fontSetting, searchDirs: dirs, themeMode: themeModeSetting, showInvisibles: showInvisiblesSetting, searchDebounceMs: searchDebounceSetting });
       showSettingsDialog = false;
       // Refocus input
       setTimeout(() => inputRef?.focus(), 100);
@@ -366,7 +368,7 @@
 
 <svelte:window on:keydown={handleKeydown} on:wheel|nonpassive={handleWheel} />
 
-<main class="container theme-{themeColorSetting} font-{fontSetting} !p-0 w-full h-full bg-background text-foreground">
+<main class="container bg-theme-{themeBackgroundSetting} accent-theme-{themeAccentSetting} font-{fontSetting} !p-0 w-full h-full bg-background text-foreground">
   {#if viewingSnippet}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div class="w-full max-w-4xl rounded-xl bg-card text-card-foreground p-6 shadow-2xl border border-border">
@@ -433,20 +435,31 @@
               <option value="Super+Space">Super+Space</option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-muted-foreground mb-1">テーマカラー</label>
-            <select bind:value={themeColorSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
-              <option value="zinc">ジンク (Zinc)</option>
-              <option value="slate">スレート (Slate)</option>
-              <option value="neutral">ニュートラル (Neutral)</option>
-              <option value="red">レッド (Red)</option>
-              <option value="blue">ブルー (Blue)</option>
-              <option value="green">グリーン (Green)</option>
-              <option value="yellow">イエロー (Yellow)</option>
-              <option value="orange">オレンジ (Orange)</option>
-              <option value="purple">パープル (Purple)</option>
-              <option value="pink">ピンク (Pink)</option>
-            </select>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-muted-foreground mb-1">背景色</label>
+              <select bind:value={themeBackgroundSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+                <option value="zinc">ジンク (Zinc)</option>
+                <option value="slate">スレート (Slate)</option>
+                <option value="neutral">ニュートラル (Neutral)</option>
+                <option value="stone">ストーン (Stone)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-muted-foreground mb-1">アクセント色味</label>
+              <select bind:value={themeAccentSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
+                <option value="zinc">ジンク (Zinc)</option>
+                <option value="slate">スレート (Slate)</option>
+                <option value="neutral">ニュートラル (Neutral)</option>
+                <option value="red">レッド (Red)</option>
+                <option value="blue">ブルー (Blue)</option>
+                <option value="green">グリーン (Green)</option>
+                <option value="yellow">イエロー (Yellow)</option>
+                <option value="orange">オレンジ (Orange)</option>
+                <option value="purple">パープル (Purple)</option>
+                <option value="pink">ピンク (Pink)</option>
+              </select>
+            </div>
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground mb-1">テーマモード</label>

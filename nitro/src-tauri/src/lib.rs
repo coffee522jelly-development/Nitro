@@ -14,11 +14,16 @@ pub struct Snippet {
 fn default_theme_mode() -> String { "system".to_string() }
 fn default_show_invisibles() -> bool { false }
 fn default_search_debounce_ms() -> u32 { 500 }
+fn default_theme_background() -> String { "zinc".to_string() }
+fn default_theme_accent() -> String { "zinc".to_string() }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppSettings {
     pub shortcut: String,
-    pub theme_color: String,
+    #[serde(default = "default_theme_background")]
+    pub theme_background: String,
+    #[serde(default = "default_theme_accent")]
+    pub theme_accent: String,
     pub font_family: String,
     pub search_dirs: Vec<String>,
     #[serde(default = "default_theme_mode")]
@@ -41,7 +46,8 @@ impl Default for AppSettings {
 
         Self {
             shortcut: "Ctrl+Space".to_string(),
-            theme_color: "zinc".to_string(),
+            theme_background: "zinc".to_string(),
+            theme_accent: "zinc".to_string(),
             font_family: "sans".to_string(),
             search_dirs: default_dirs,
             theme_mode: "system".to_string(),
@@ -182,7 +188,7 @@ fn get_settings() -> AppSettings {
 }
 
 #[tauri::command]
-fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, font_family: Option<String>, search_dirs: Option<Vec<String>>, theme_mode: Option<String>, show_invisibles: Option<bool>, search_debounce_ms: Option<u32>) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, shortcut: String, theme_background: Option<String>, theme_accent: Option<String>, font_family: Option<String>, search_dirs: Option<Vec<String>>, theme_mode: Option<String>, show_invisibles: Option<bool>, search_debounce_ms: Option<u32>) -> Result<(), String> {
     let path = get_settings_file_path().ok_or("Failed to get config path")?;
 
     let old_settings = get_settings();
@@ -193,10 +199,13 @@ fn save_settings(app: tauri::AppHandle, shortcut: String, theme_color: String, f
     let t_mode = theme_mode.unwrap_or(old_settings.theme_mode.clone());
     let s_invisibles = show_invisibles.unwrap_or(old_settings.show_invisibles);
     let s_debounce = search_debounce_ms.unwrap_or(old_settings.search_debounce_ms);
+    let bg = theme_background.unwrap_or(old_settings.theme_background.clone());
+    let acc = theme_accent.unwrap_or(old_settings.theme_accent.clone());
 
     let settings = AppSettings {
         shortcut: shortcut.clone(),
-        theme_color,
+        theme_background: bg,
+        theme_accent: acc,
         font_family: font,
         search_dirs: dirs,
         theme_mode: t_mode,

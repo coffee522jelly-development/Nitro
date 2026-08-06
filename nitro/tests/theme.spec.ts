@@ -32,7 +32,7 @@ test('theme class is applied and item background is highlighted', async ({ page 
           return null;
         }
         if (cmd === "get_clipboard_history") return ["test clipboard"];
-        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_color: "red", search_dirs: ["/mock/path"] };
+        if (cmd === "get_settings") return { shortcut: "Ctrl+Space", theme_background: "slate", theme_accent: "red", search_dirs: ["/mock/path"] };
         return null;
       }
     };
@@ -40,9 +40,10 @@ test('theme class is applied and item background is highlighted', async ({ page 
 
   await page.goto('/');
 
-  // Verify that the main container has the 'theme-red' class
+  // Verify that the main container has the theme classes
   const mainContainer = page.locator('main.container');
-  await expect(mainContainer).toHaveClass(/theme-red/);
+  await expect(mainContainer).toHaveClass(/accent-theme-red/);
+  await expect(mainContainer).toHaveClass(/bg-theme-slate/);
 
   // Focus the search input and search for the mock file
   const searchInput = page.getByPlaceholder("アプリを検索...");
