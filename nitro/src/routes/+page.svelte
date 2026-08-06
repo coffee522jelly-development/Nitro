@@ -122,7 +122,14 @@
 
   $effect(() => {
     applyThemeMode();
+    // Update body classes to preview themes in real-time
+    document.body.className = `bg-theme-${themeBackgroundSetting} accent-theme-${themeAccentSetting} font-${fontSetting}`;
   });
+
+  async function cancelSettings() {
+    showSettingsDialog = false;
+    await loadSettings(); // Revert back to saved settings to undo live preview
+  }
 
   async function saveSettings() {
     try {
@@ -368,7 +375,7 @@
 
 <svelte:window on:keydown={handleKeydown} on:wheel|nonpassive={handleWheel} />
 
-<main class="container bg-theme-{themeBackgroundSetting} accent-theme-{themeAccentSetting} font-{fontSetting} !p-0 w-full h-full bg-background text-foreground">
+<main class="container !p-0 w-full h-full bg-background text-foreground">
   {#if viewingSnippet}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div class="w-full max-w-4xl rounded-xl bg-card text-card-foreground p-6 shadow-2xl border border-border">
@@ -511,7 +518,7 @@
             <textarea bind:value={searchDirsSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 min-h-[100px]"></textarea>
           </div>
           <div class="flex justify-end space-x-2 pt-2">
-            <button class="rounded-md px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors" onclick={() => showSettingsDialog = false}>キャンセル</button>
+            <button class="rounded-md px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-secondary-foreground transition-colors" onclick={cancelSettings}>キャンセル</button>
             <button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 transition-colors" onclick={saveSettings}>保存</button>
           </div>
         </div>

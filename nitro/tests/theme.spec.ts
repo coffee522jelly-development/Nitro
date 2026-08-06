@@ -40,10 +40,10 @@ test('theme class is applied and item background is highlighted', async ({ page 
 
   await page.goto('/');
 
-  // Verify that the main container has the theme classes
-  const mainContainer = page.locator('main.container');
-  await expect(mainContainer).toHaveClass(/accent-theme-red/);
-  await expect(mainContainer).toHaveClass(/bg-theme-slate/);
+  // Verify that the document body has the theme classes via real-time preview injection
+  const body = page.locator('body');
+  await expect(body).toHaveClass(/accent-theme-red/);
+  await expect(body).toHaveClass(/bg-theme-slate/);
 
   // Focus the search input and search for the mock file
   const searchInput = page.getByPlaceholder("アプリを検索...");
