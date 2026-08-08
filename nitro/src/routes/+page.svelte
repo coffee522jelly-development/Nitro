@@ -397,7 +397,7 @@
             <textarea
               bind:this={viewingSnippetTextarea}
               readonly
-              class="relative z-10 flex min-h-[400px] w-full rounded-md border !border-[#333] {showInvisiblesSetting ? '!bg-transparent' : '!bg-black/50'} px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+              class="relative z-10 flex min-h-[400px] w-full rounded-md border border-input {showInvisiblesSetting ? 'bg-transparent' : 'bg-muted/50'} px-3 py-2 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
               style="tab-size: 4; -moz-tab-size: 4;"
               onkeydown={(e) => { if (e.key === 'Escape') viewingSnippet = null;  }}
               onscroll={() => syncScroll(viewingSnippetTextarea, viewingSnippetInvisibles)}
@@ -620,6 +620,7 @@
             value={result.type === "snippet" ? `snippet-${result.title}` : result.type === "app" ? `app-${result.id}` : result.type === "web" ? `web-${result.query}` : result.type === 'clipboard' ? `clip-${result.text}` : `file-${result.path}`}
             onSelect={() => { executeResult(result); }}
             ondblclick={(e) => { e.preventDefault(); executeResult(result); }}
+            class="group/command-item data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground"
           >
             <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 w-full items-center">
               {#if result.type === "snippet"}
