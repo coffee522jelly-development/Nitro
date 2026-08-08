@@ -49,6 +49,16 @@
   let searchDirsSetting = $state("");
   let themeModeSetting = $state("system");
   let showInvisiblesSetting = $state(false);
+
+  // Derived state to replace $effect-driven state update
+  let currentIsDark = $derived.by(() => {
+    if (themeModeSetting === "dark") return true;
+    if (themeModeSetting === "light") return false;
+    if (typeof window !== "undefined" && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return true; // fallback
+  });
   let searchDebounceSetting = $state(500);
 
   // Sync scroll for snippet invisibles
@@ -97,32 +107,27 @@
       themeModeSetting = settings.theme_mode;
       showInvisiblesSetting = settings.show_invisibles;
       searchDebounceSetting = settings.search_debounce_ms;
-      applyThemeMode();
     } catch (e) {
       console.error("Failed to load settings:", e);
     }
   }
 
-  function applyThemeMode() {
-    let isDark = false;
-    if (themeModeSetting === "dark") {
-      isDark = true;
-    } else if (themeModeSetting === "light") {
-      isDark = false;
-    } else {
-      isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-
-    if (isDark) {
+  $effect(() => {
+    // 1. Apply root `.dark` class
+    if (currentIsDark) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }
 
-  $effect(() => {
-    applyThemeMode();
-    // Update body classes to preview themes in real-time
+    // 2. Auto-switch invalid backgrounds when mode changes
+    if (currentIsDark && ["white", "light-gray"].includes(themeBackgroundSetting)) {
+      themeBackgroundSetting = "black";
+    } else if (!currentIsDark && ["black", "slate", "zinc"].includes(themeBackgroundSetting)) {
+      themeBackgroundSetting = "white";
+    }
+
+    // 3. Update body classes to preview themes in real-time
     document.body.className = `bg-theme-${themeBackgroundSetting} accent-theme-${themeAccentSetting} font-${fontSetting}`;
   });
 
@@ -446,10 +451,15 @@
             <div>
               <label class="block text-sm font-medium text-muted-foreground mb-1">背景色</label>
               <select bind:value={themeBackgroundSetting} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-0">
-                <option value="zinc">ジンク (Zinc)</option>
-                <option value="slate">スレート (Slate)</option>
-                <option value="neutral">ニュートラル (Neutral)</option>
-                <option value="stone">ストーン (Stone)</option>
+                {#if currentIsDark}
+                  <option value="black">ブラック (Black)</option>
+                  <option value="slate">スレート (Slate)</option>
+                  <option value="gray">グレー (Gray)</option>
+                {:else}
+                  <option value="white">ホワイト (White)</option>
+                  <option value="light-gray">ライトグレー (Light Gray)</option>
+                  <option value="gray">グレー (Gray)</option>
+                {/if}
               </select>
             </div>
             <div>
