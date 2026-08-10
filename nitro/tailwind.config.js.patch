@@ -1,0 +1,24 @@
+--- nitro/tailwind.config.js
++++ nitro/tailwind.config.js
+@@ -47,6 +47,21 @@
+       },
+       fontFamily: {
+         sans: ["Inter", ...fontFamily.sans],
++        // The below are needed if they are used as utility classes in the code (e.g., .font-roboto)
++        // Note: I already added `.font-roboto` as custom classes in app.css, which works fine,
++        // but adding them here makes it available to the entire tailwind ecosystem.
++        // We don't strictly *need* to define them all here because we defined custom classes in app.css,
++        // but we'll add a few fallbacks just in case.
++        inter: ["Inter", "sans-serif"],
++        roboto: ["Roboto", "sans-serif"],
++        "open-sans": ["Open Sans", "sans-serif"],
++        lato: ["Lato", "sans-serif"],
++        montserrat: ["Montserrat", "sans-serif"],
++        "noto-sans": ["Noto Sans JP", "sans-serif"],
++        ubuntu: ["Ubuntu", "sans-serif"],
++        "fira-code": ["Fira Code", "monospace"],
++        "jetbrains-mono": ["JetBrains Mono", "monospace"],
++        "biz-udpgothic": ["BIZ UDPGothic", "sans-serif"],
+       },
+     },
+   },
