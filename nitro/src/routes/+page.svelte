@@ -649,6 +649,7 @@
                   {#if result.id !== -1}
                     <button
                       class="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center justify-center shrink-0"
+                      onpointerdown={(e) => { e.stopPropagation(); }}
                       onclick={(e) => { e.stopPropagation(); invoke("kill_window", { id: result.id, appName: result.app_name }).then(() => setTimeout(search, 500)); }}
                       title="終了"
                     >
@@ -671,6 +672,7 @@
                   <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 text-right">Clipboard</span>
                   <button
                     class="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors whitespace-nowrap"
+                    onpointerdown={(e) => { e.stopPropagation(); }}
                     onclick={(e) => { e.stopPropagation(); newSnippetContent = result.text; showSnippetDialog = true; }}
                     title="スニペットへ追加"
                   >
@@ -686,6 +688,7 @@
                   <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap group-data-[selected]/command-item:text-primary-foreground/70 text-right">{result.path}</span>
                   <button
                     class="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors flex items-center justify-center shrink-0"
+                    onpointerdown={(e) => { e.stopPropagation(); }}
                     onclick={(e) => { e.stopPropagation(); openParentDir(result.path); }}
                     title="フォルダを開く"
                   >
