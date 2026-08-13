@@ -360,7 +360,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, delete_snippet, get_settings, save_settings, app_get_open_windows, focus_window, open_target, get_clipboard_history])
+        .invoke_handler(tauri::generate_handler![greet, search_files, get_snippets, save_snippet, delete_snippet, get_settings, save_settings, app_get_open_windows, focus_window, kill_window, open_target, get_clipboard_history])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -404,6 +404,40 @@ fn get_clipboard_history(state: tauri::State<'_, ClipboardHistory>) -> Vec<Strin
 fn open_target(path: String) -> Result<(), String> {
 
     open::that(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[allow(unused_variables)]
+fn kill_window(id: u32, app_name: String) {
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+        let id_hex = format!("0x{:x}", id);
+        let _ = Command::new("wmctrl")
+            .args(&["-i", "-c", &id_hex])
+            .spawn();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        let safe_name = app_name.replace('"', "");
+        let script = format!("tell application \"{}\" to quit", safe_name);
+        let _ = Command::new("osascript")
+            .args(&["-e", &script])
+            .spawn();
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let safe_name = app_name.replace("'", "''");
+        let script = format!("Stop-Process -Name '{}' -Force -ErrorAction SilentlyContinue", safe_name);
+        let _ = Command::new("powershell")
+            .creation_flags(CREATE_NO_WINDOW)
+            .args(&["-Command", &script])
+            .spawn();
+    }
 }
 
 #[tauri::command]

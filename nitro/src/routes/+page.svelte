@@ -152,6 +152,7 @@
     try {
       if (currentMode === "apps") {
         let openWindows: { id: number, app_name: string, title: string }[] = await invoke<{ id: number, app_name: string, title: string }[]>("app_get_open_windows").catch(() => []);
+        openWindows.unshift({ id: -1, app_name: "System", title: "すべてのアプリを終了" });
         if (currentQuery.trim() !== "") {
           const queryLower = currentQuery.toLowerCase();
           openWindows = openWindows.filter(w =>
@@ -282,7 +283,16 @@
     isExecuting = true;
     try {
       if (result.type === "app") {
-        await invoke("focus_window", { id: result.id, appName: result.app_name });
+        if (result.id === -1) {
+          // Close all apps
+          const allWindows = await invoke<{ id: number, app_name: string, title: string }[]>("app_get_open_windows").catch(() => []);
+          for (const app of allWindows) {
+            await invoke("kill_window", { id: app.id, appName: app.app_name }).catch(console.error);
+          }
+          setTimeout(search, 500); // refresh after a short delay
+        } else {
+          await invoke("focus_window", { id: result.id, appName: result.app_name });
+        }
       } else if (result.type === "file") {
         await invoke("open_target", { path: result.path });
       } else if (result.type === "snippet") {
@@ -634,7 +644,18 @@
                   <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><svelte:component this={getAppIcon(result.app_name, result.title)} class="size-5" /></span>
                   <span class="file-name font-medium group-data-[selected]/command-item:text-primary-foreground truncate">{result.title}</span>
                 </div>
-                <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 text-right">{result.app_name}</span>
+                <div class="flex items-center space-x-2 w-full justify-end min-w-0">
+                  <span class="file-path text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap px-2 group-data-[selected]/command-item:text-primary-foreground/70 text-right">{result.app_name}</span>
+                  {#if result.id !== -1}
+                    <button
+                      class="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center justify-center shrink-0"
+                      onclick={(e) => { e.stopPropagation(); invoke("kill_window", { id: result.id, appName: result.app_name }).then(() => setTimeout(search, 500)); }}
+                      title="終了"
+                    >
+                      終了
+                    </button>
+                  {/if}
+                </div>
               {:else if result.type === "web"}
                 <div class="flex items-center min-w-0">
                   <span class="file-icon group-data-[selected]/command-item:text-primary-foreground flex items-center justify-center shrink-0 w-6"><GlobeIcon class="size-5" /></span>
